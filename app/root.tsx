@@ -19,7 +19,7 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Playfair+Display:wght@400;500;600;700&display=swap",
   },
 ];
 
@@ -29,10 +29,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+          name="description"
+          content="Tiệm ảnh Hina Studio — Minimalist photography portfolio showcasing cinematic wedding, street, and lookbook photography."
+        />
+        <title>Tiệm ảnh Hina Studio — Photography Portfolio</title>
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -62,14 +67,18 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
+    <main className="flex min-h-screen items-center justify-center">
+      <div className="text-center space-y-4">
+        <h1 className="text-6xl font-light  text-foreground">
+          {message}
+        </h1>
+        <p className="text-muted-foreground max-w-md mx-auto">{details}</p>
+        {stack && (
+          <pre className="mt-6 w-full max-w-2xl p-4 overflow-x-auto text-left text-sm bg-muted rounded-lg">
+            <code>{stack}</code>
+          </pre>
+        )}
+      </div>
     </main>
   );
 }
