@@ -207,8 +207,8 @@ export default function NewAlbumPage() {
         transition={{ duration: 0.4 }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-light  mb-2">New Album</h1>
-        <p className="text-muted-foreground font-light">
+        <h1 className="text-3xl font-medium mb-2">New Album</h1>
+        <p className="text-muted-foreground font-medium">
           Create a new album and upload your photos.
         </p>
       </motion.div>
@@ -220,7 +220,7 @@ export default function NewAlbumPage() {
           className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3"
         >
           <AlertCircle size={18} className="text-destructive shrink-0" />
-          <p className="text-destructive text-sm font-light">
+          <p className="text-destructive text-sm font-medium">
             {error || (actionData as any)?.error}
           </p>
         </motion.div>
@@ -233,7 +233,7 @@ export default function NewAlbumPage() {
           className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-3"
         >
           <CheckCircle size={18} className="text-green-500 shrink-0" />
-          <p className="text-green-600 dark:text-green-400 text-sm font-light">
+          <p className="text-green-600 dark:text-green-400 text-sm font-medium">
             Album created successfully!
           </p>
         </motion.div>
@@ -247,10 +247,10 @@ export default function NewAlbumPage() {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="bg-card border border-border/50 rounded-lg p-6 space-y-5"
         >
-          <h2 className="text-lg font-light ">Album Details</h2>
+          <h2 className="text-lg font-medium">Album Details</h2>
 
           <div className="space-y-2">
-            <label className="block text-sm font-light  text-muted-foreground">
+            <label className="block text-sm font-medium text-muted-foreground">
               Title *
             </label>
             <input
@@ -265,24 +265,24 @@ export default function NewAlbumPage() {
                 );
               }}
               placeholder="e.g. Golden Hour Wedding"
-              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-light placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
+              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-light  text-muted-foreground">
+            <label className="block text-sm font-medium text-muted-foreground">
               Slug * (URL friendly)
             </label>
             <input
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               placeholder="e.g. golden-hour-wedding"
-              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-light placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
+              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-light  text-muted-foreground">
+            <label className="block text-sm font-medium text-muted-foreground">
               Description
             </label>
             <textarea
@@ -290,12 +290,12 @@ export default function NewAlbumPage() {
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="A brief description of this album..."
-              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-light placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all resize-none"
+              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all resize-none"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-light  text-muted-foreground">
+            <label className="block text-sm font-medium text-muted-foreground">
               Category *
             </label>
             <div className="flex flex-wrap gap-2">
@@ -304,7 +304,7 @@ export default function NewAlbumPage() {
                   key={cat.id}
                   type="button"
                   onClick={() => setCategoryId(cat.id)}
-                  className={`px-4 py-2 text-sm font-light  rounded-md transition-all cursor-pointer ${categoryId === cat.id
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer ${categoryId === cat.id
                     ? "bg-accent text-white"
                     : "bg-muted text-muted-foreground hover:text-foreground"
                     }`}
@@ -323,7 +323,7 @@ export default function NewAlbumPage() {
           transition={{ duration: 0.4, delay: 0.2 }}
           className="bg-card border border-border/50 rounded-lg p-6 space-y-5"
         >
-          <h2 className="text-lg font-light ">Photos</h2>
+          <h2 className="text-lg font-medium">Photos</h2>
 
           {/* Drop zone */}
           <div
@@ -335,10 +335,10 @@ export default function NewAlbumPage() {
               strokeWidth={1}
               className="mx-auto text-muted-foreground group-hover:text-accent transition-colors mb-4"
             />
-            <p className="text-sm text-muted-foreground font-light">
+            <p className="text-sm text-muted-foreground font-medium">
               Click to select photos
             </p>
-            <p className="text-xs text-muted-foreground/60 font-light mt-1">
+            <p className="text-xs text-muted-foreground/60 font-medium mt-1">
               JPG, PNG, WebP • Max 20MB per file
             </p>
             <input
@@ -410,7 +410,7 @@ export default function NewAlbumPage() {
               type="button"
               onClick={handleUpload}
               disabled={isUploading}
-              className="flex items-center gap-2 px-6 py-3 bg-accent text-white text-sm font-light rounded-md hover:bg-accent/90 disabled:opacity-50 transition-all cursor-pointer"
+              className="flex items-center gap-2 px-6 py-3 bg-accent text-white text-sm font-medium rounded-md hover:bg-accent/90 disabled:opacity-50 transition-all cursor-pointer"
             >
               {isUploading ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -434,7 +434,7 @@ export default function NewAlbumPage() {
           <button
             type="submit"
             disabled={isSubmitting || !title || !slug || !categoryId}
-            className="w-full py-3 bg-primary text-primary-foreground text-sm font-light uppercase rounded-md hover:bg-accent disabled:opacity-50 transition-all cursor-pointer"
+            className="w-full py-3 bg-primary text-primary-foreground text-sm font-medium uppercase rounded-md hover:bg-accent disabled:opacity-50 transition-all cursor-pointer"
           >
             {isSubmitting ? "Publishing..." : "Publish Album"}
           </button>

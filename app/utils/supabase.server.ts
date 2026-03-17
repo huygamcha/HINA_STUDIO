@@ -47,7 +47,6 @@ export interface Photo {
 
 /** Category helpers */
 export async function getCategories(): Promise<Category[]> {
-  console.log("Prisma keys:", Object.keys(prisma || {}));
   const categories = await (prisma as any).category.findMany({
     orderBy: { sortOrder: "asc" },
   });

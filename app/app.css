@@ -4,36 +4,36 @@
    GLOBAL THEME — HSL CSS Custom Properties
    ═══════════════════════════════════════════ */
 :root {
-  --background:   30 20% 98%;    /* Warmer paper white */
-  --foreground:   20 10% 12%;    /* Deep charcoal with warm undertones */
-  --primary:      20 10% 15%;
-  --primary-foreground: 30 20% 98%;
-  --accent:       25 40% 45%;    /* Sophisticated bronze/sand */
-  --accent-foreground:  20 10% 12%;
-  --muted:        30 15% 94%;
-  --muted-foreground:   20 10% 50%;
-  --border:       30 10% 90%;
-  --ring:         25 40% 45%;
-  --radius:       0rem;          /* Sharp edges for a more high-end gallery feel */
-  --card:         30 20% 100%;
-  --card-foreground:    20 10% 12%;
+  --background:   160 30% 98%;    /* Mist white with green undertone */
+  --foreground:   165 45% 10%;    /* Deep obsidian green */
+  --primary:      165 45% 12%;
+  --primary-foreground: 160 30% 98%;
+  --accent:       38 40% 55%;     /* Muted gold/bronze */
+  --accent-foreground:  165 45% 10%;
+  --muted:        160 20% 94%;
+  --muted-foreground:   165 20% 45%;
+  --border:       160 15% 90%;
+  --ring:         165 45% 12%;
+  --radius:       0rem;           /* Keep sharp gallery edges */
+  --card:         160 30% 100%;
+  --card-foreground:    165 45% 10%;
   --destructive:  0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 }
 
 .dark {
-  --background:   20 10% 4%;     /* True ink black */
-  --foreground:   30 10% 90%;    /* Soft white */
-  --primary:      30 10% 90%;
-  --primary-foreground: 20 10% 4%;
-  --accent:       25 30% 55%;    /* Muted gold */
-  --accent-foreground:  30 10% 90%;
-  --muted:        20 10% 10%;
-  --muted-foreground:   20 10% 45%;
-  --border:       20 10% 15%;
-  --ring:         25 30% 55%;
-  --card:         20 10% 6%;
-  --card-foreground:    30 10% 90%;
+  --background:   165 50% 3%;     /* Deepest forest ink */
+  --foreground:   150 20% 92%;    /* Soft ethereal white */
+  --primary:      150 20% 92%;
+  --primary-foreground: 165 50% 3%;
+  --accent:       42 40% 60%;     /* Ethereal gold */
+  --accent-foreground:  150 20% 92%;
+  --muted:        165 30% 8%;
+  --muted-foreground:   160 15% 55%;
+  --border:       165 25% 12%;
+  --ring:         150 20% 92%;
+  --card:         165 45% 5%;
+  --card-foreground:    150 20% 92%;
   --destructive:  0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 }
@@ -105,7 +105,24 @@ html {
 }
 
 body {
-  background-color: hsl(var(--background));
+  background: linear-gradient(
+    165deg, 
+    hsl(var(--background)) 0%, 
+    hsl(165 40% 92%) 100%
+  );
+  background-attachment: fixed;
+}
+
+.dark body {
+  background: linear-gradient(
+    165deg, 
+    hsl(var(--background)) 0%, 
+    hsl(165 45% 6%) 100%
+  );
+  background-attachment: fixed;
+}
+
+body {
   color: hsl(var(--foreground));
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -191,4 +208,12 @@ body {
 
 .group:hover .img-zoom {
   transform: scale(1.08);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

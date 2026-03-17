@@ -45,11 +45,11 @@ export default function AdminLayout() {
             className="flex items-center gap-2 text-foreground hover:text-accent transition-colors"
           >
             <Camera size={20} strokeWidth={1.5} />
-            <span className="text-lg font-light  uppercase">
+            <span className="text-lg font-medium uppercase">
               Tiệm ảnh Hina
             </span>
           </Link>
-          <p className="text-xs text-muted-foreground font-light mt-1 ">
+          <p className="text-xs text-muted-foreground font-medium mt-1">
             Admin Panel
           </p>
         </div>
@@ -61,7 +61,7 @@ export default function AdminLayout() {
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-light  transition-all duration-200 ${isActive
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 ${isActive
                   ? "bg-accent/10 text-accent"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
@@ -77,7 +77,7 @@ export default function AdminLayout() {
           <form method="post">
             <button
               type="submit"
-              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-light  text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-md transition-all duration-200 cursor-pointer"
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-md transition-all duration-200 cursor-pointer"
             >
               <LogOut size={18} strokeWidth={1.5} />
               Sign Out

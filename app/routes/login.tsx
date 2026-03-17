@@ -72,11 +72,11 @@ export default function LoginPage() {
             className="inline-flex items-center gap-2 text-foreground hover:text-accent transition-colors"
           >
             <Camera size={24} strokeWidth={1.5} />
-            <span className="text-xl font-light  uppercase">
+            <span className="text-xl font-medium uppercase">
               Tiệm ảnh Hina
             </span>
           </Link>
-          <p className="text-muted-foreground text-sm font-light mt-3 ">
+          <p className="text-muted-foreground text-sm font-medium mt-3">
             Studio Administration
           </p>
         </div>
@@ -85,14 +85,14 @@ export default function LoginPage() {
         <div className="bg-card border border-border/50 p-8 rounded-lg shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <Lock size={16} strokeWidth={1.5} className="text-accent" />
-            <h1 className="text-lg font-light ">Sign In</h1>
+            <h1 className="text-lg font-medium">Sign In</h1>
           </div>
 
           {actionData?.error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm font-light"
+              className="mb-6 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm font-medium"
             >
               {actionData.error}
             </motion.div>
@@ -102,7 +102,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <label
                 htmlFor="email"
-                className="block text-sm font-light  text-muted-foreground"
+                className="block text-sm font-medium text-muted-foreground"
               >
                 Email
               </label>
@@ -113,14 +113,14 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 placeholder="admin@studio.com"
-                className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-light placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
+                className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
               />
             </div>
 
             <div className="space-y-2">
               <label
                 htmlFor="password"
-                className="block text-sm font-light  text-muted-foreground"
+                className="block text-sm font-medium text-muted-foreground"
               >
                 Password
               </label>
@@ -132,7 +132,7 @@ export default function LoginPage() {
                   required
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 pr-12 bg-background border border-border rounded-md text-sm font-light placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
+                  className="w-full px-4 py-3 pr-12 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
                 />
                 <button
                   type="button"
@@ -150,14 +150,14 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-primary text-primary-foreground text-sm font-light  uppercase hover:bg-accent transition-all duration-300 rounded-md cursor-pointer"
+              className="w-full py-3 bg-primary text-primary-foreground text-sm font-medium uppercase hover:bg-accent transition-all duration-300 rounded-md cursor-pointer"
             >
               Sign In
             </button>
           </Form>
         </div>
 
-        <p className="text-center mt-6 text-xs text-muted-foreground font-light">
+        <p className="text-center mt-6 text-xs text-muted-foreground font-medium">
           <Link to="/" className="hover:text-foreground transition-colors">
             ← Back to Portfolio
           </Link>

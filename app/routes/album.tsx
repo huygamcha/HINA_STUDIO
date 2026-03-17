@@ -110,7 +110,7 @@ function Lightbox({
         <ChevronRight size={48} strokeWidth={1} className="group-hover:translate-x-1 transition-transform" />
       </button>
 
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-foreground/20 text-[10px]  uppercase font-light">
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-foreground/40 text-[11px] uppercase font-medium">
         {currentIndex + 1} / {photos.length}
       </div>
     </motion.div>
@@ -135,16 +135,16 @@ export default function AlbumPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background selection:bg-accent/30">
-      {/* ─── MINIMAL BACK NAV ─── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 p-6 md:p-10 pointer-events-none">
+    <div className="min-h-[100dvh] bg-background selection:bg-accent/30 flex flex-col">
+      {/* ─── STICKY HEADER ─── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-foreground/5 py-3 px-6 md:px-10">
         <div className="max-w-screen-2xl mx-auto flex justify-between items-center">
           <Link
             to="/"
-            className="pointer-events-auto p-3 bg-foreground/5 hover:bg-foreground/10 text-foreground/40 hover:text-foreground backdrop-blur-xl border border-foreground/5 rounded-full transition-all duration-300"
+            className="p-2 bg-foreground/5 hover:bg-foreground/10 text-foreground/60 hover:text-foreground backdrop-blur-xl border border-foreground/5 rounded-full transition-all duration-300"
             aria-label="Back"
           >
-            <ArrowLeft size={20} strokeWidth={1.5} />
+            <ArrowLeft size={16} strokeWidth={2} />
           </Link>
 
           <motion.div 
@@ -152,21 +152,21 @@ export default function AlbumPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
-            <h1 className="text-[10px] uppercase tracking-[0.4em] font-light text-foreground/60 mb-1">
+            <h1 className="text-[13px] md:text-[15px] uppercase font-extrabold text-foreground mb-0.5 leading-none">
               {album.title}
             </h1>
-            <p className="text-[8px] uppercase tracking-[0.2em] font-light text-foreground/20">
+            <p className="text-[9px] md:text-[10px] uppercase font-bold text-accent leading-none">
               {album.categoryName}
             </p>
           </motion.div>
 
-          {/* Spacer to keep title centered */}
-          <div className="w-[46px]" />
+          {/* Spacer to keep title centered - updated to match new small button size */}
+          <div className="w-[34px]" />
         </div>
       </nav>
 
       {/* ─── PHOTO GRID ─── */}
-      <main className="pt-32 pb-20 px-6 md:px-10 max-w-screen-2xl mx-auto">
+      <main className="pt-20 md:pt-32 pb-20 px-4 md:px-10 max-w-screen-2xl mx-auto w-full">
         <div className="columns-1 md:columns-2 lg:columns-3 gap-4 md:gap-6 space-y-4 md:space-y-6">
           {photos.map((photo, index) => (
             <motion.div
@@ -175,7 +175,7 @@ export default function AlbumPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: index * 0.05 }}
-              className="group relative overflow-hidden cursor-pointer rounded-sm bg-muted"
+              className="group relative overflow-hidden cursor-pointer rounded-xl bg-muted"
               onClick={() => setLightboxIndex(index)}
             >
               <img
@@ -190,7 +190,7 @@ export default function AlbumPage() {
         </div>
 
         {photos.length === 0 && (
-          <div className="h-[60vh] flex flex-col items-center justify-center text-muted-foreground/40  font-light  uppercase text-sm">
+          <div className="h-[60vh] flex flex-col items-center justify-center text-muted-foreground/60 font-medium uppercase text-sm">
             Empty frame
           </div>
         )}

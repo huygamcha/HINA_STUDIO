@@ -85,19 +85,19 @@ export default function CategoriesPage() {
     <div className="p-8 max-w-4xl">
       <div className="flex justify-between items-center mb-10">
         <div>
-          <h1 className="text-3xl font-light mb-2">Categories</h1>
-          <p className="text-muted-foreground font-light text-sm">Manage portfolio categories and organization.</p>
+          <h1 className="text-3xl font-normal mb-2">Categories</h1>
+          <p className="text-muted-foreground font-normal text-sm">Manage portfolio categories and organization.</p>
         </div>
         <button
           onClick={() => { resetForm(); setIsAdding(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-md text-sm font-light hover:bg-accent/90 transition-all cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-md text-sm font-medium hover:bg-accent/90 transition-all cursor-pointer"
         >
           <Plus size={18} /> Add Category
         </button>
       </div>
 
       {actionData?.error && (
-        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3 text-destructive text-sm font-light">
+        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3 text-destructive text-sm font-medium">
           <AlertCircle size={18} /> {actionData.error}
         </div>
       )}
@@ -106,10 +106,10 @@ export default function CategoriesPage() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-muted/50 border-b border-border/50">
-              <th className="px-6 py-4 text-xs uppercase tracking-wider font-light text-muted-foreground">Name</th>
-              <th className="px-6 py-4 text-xs uppercase tracking-wider font-light text-muted-foreground">Slug</th>
-              <th className="px-6 py-4 text-xs uppercase tracking-wider font-light text-muted-foreground w-20 text-center">Sort</th>
-              <th className="px-6 py-4 text-xs uppercase tracking-wider font-light text-muted-foreground text-right">Actions</th>
+              <th className="px-6 py-4 text-xs uppercase font-medium text-muted-foreground">Name</th>
+              <th className="px-6 py-4 text-xs uppercase font-medium text-muted-foreground">Slug</th>
+              <th className="px-6 py-4 text-xs uppercase font-medium text-muted-foreground w-20 text-center">Sort</th>
+              <th className="px-6 py-4 text-xs uppercase font-medium text-muted-foreground text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">
@@ -225,9 +225,9 @@ export default function CategoriesPage() {
                   </>
                 ) : (
                   <>
-                    <td className="px-6 py-4 text-sm font-light">{cat.name}</td>
+                    <td className="px-6 py-4 text-sm font-normal">{cat.name}</td>
                     <td className="px-6 py-4 text-xs font-mono text-muted-foreground">{cat.slug}</td>
-                    <td className="px-6 py-4 text-sm font-light text-center">{cat.sort_order}</td>
+                    <td className="px-6 py-4 text-sm font-normal text-center">{cat.sort_order}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 

@@ -24,8 +24,8 @@ export default function AdminDashboard() {
         transition={{ duration: 0.4 }}
         className="mb-10"
       >
-        <h1 className="text-3xl font-light  mb-2">Dashboard</h1>
-        <p className="text-muted-foreground font-light">
+        <h1 className="text-3xl font-medium mb-2">Dashboard</h1>
+        <p className="text-muted-foreground font-medium">
           Manage your photography portfolio from here.
         </p>
       </motion.div>
@@ -41,11 +41,11 @@ export default function AdminDashboard() {
           >
             <div className="flex items-center justify-between">
               <stat.icon size={20} strokeWidth={1.5} className="text-accent" />
-              <span className="text-xs text-muted-foreground font-light">{stat.trend}</span>
+              <span className="text-xs text-muted-foreground font-medium">{stat.trend}</span>
             </div>
             <div>
-              <p className="text-3xl font-light">{stat.value}</p>
-              <p className="text-sm text-muted-foreground font-light mt-1">{stat.label}</p>
+              <p className="text-3xl font-medium">{stat.value}</p>
+              <p className="text-sm text-muted-foreground font-medium mt-1">{stat.label}</p>
             </div>
           </motion.div>
         ))}
@@ -56,7 +56,7 @@ export default function AdminDashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.3 }}
       >
-        <h2 className="text-lg font-light  mb-4">Quick Actions</h2>
+        <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
             to="/admin/new-album"
@@ -66,8 +66,8 @@ export default function AdminDashboard() {
               <PlusCircle size={24} strokeWidth={1.5} className="text-accent" />
             </div>
             <div>
-              <p className="text-sm font-light ">Create New Album</p>
-              <p className="text-xs text-muted-foreground font-light mt-1">
+              <p className="text-sm font-medium">Create New Album</p>
+              <p className="text-xs text-muted-foreground font-medium mt-1">
                 Upload photos and publish a new album
               </p>
             </div>
@@ -80,8 +80,8 @@ export default function AdminDashboard() {
               <Image size={24} strokeWidth={1.5} className="text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-light ">View Portfolio</p>
-              <p className="text-xs text-muted-foreground font-light mt-1">
+              <p className="text-sm font-medium">View Portfolio</p>
+              <p className="text-xs text-muted-foreground font-medium mt-1">
                 Preview your public portfolio
               </p>
             </div>
