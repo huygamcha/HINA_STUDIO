@@ -14,7 +14,7 @@ import { getAlbumBySlug, getAlbumPhotos } from "~/utils/supabase.server";
    ═══════════════════════════════════════════ */
 export async function loader({ params }: { params: { slug: string } }) {
   const album = await getAlbumBySlug(params.slug);
-  
+
   if (!album) {
     throw new Response("Album not found", { status: 404 });
   }
@@ -110,7 +110,7 @@ function Lightbox({
         <ChevronRight size={48} strokeWidth={1} className="group-hover:translate-x-1 transition-transform" />
       </button>
 
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-foreground/40 text-[11px] uppercase font-medium">
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-foreground/40 text-xs uppercase font-medium">
         {currentIndex + 1} / {photos.length}
       </div>
     </motion.div>
@@ -135,39 +135,67 @@ export default function AlbumPage() {
   );
 
   return (
-    <div className="min-h-[100dvh] bg-background selection:bg-accent/30 flex flex-col">
-      {/* ─── STICKY HEADER ─── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-foreground/5 py-3 px-6 md:px-10">
-        <div className="max-w-screen-2xl mx-auto flex justify-between items-center">
-          <Link
-            to="/"
-            className="p-2 bg-foreground/5 hover:bg-foreground/10 text-foreground/60 hover:text-foreground backdrop-blur-xl border border-foreground/5 rounded-full transition-all duration-300"
-            aria-label="Back"
-          >
-            <ArrowLeft size={16} strokeWidth={2} />
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* ═══════════════════════════════════════
+          HEADER — Logo left, Nav right (Synced with home)
+         ═══════════════════════════════════════ */}
+      <header className="sticky top-0 z-50 bg-white border-b border-black/5">
+        <div className="w-full px-6 md:px-10 flex items-center justify-between h-16 md:h-[72px]">
+          {/* Logo */}
+          <Link to="/" className="shrink-0">
+            <span className="font-body text-2xl md:text-3xl font-semibold text-black uppercase">
+              HINA
+            </span>
+            <span className="font-body text-2xl md:text-3xl font-light text-black/30 ml-1 uppercase">
+              STUDIO
+            </span>
           </Link>
 
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
+          {/* Zalo Icon */}
+          <a
+            href="https://zalo.me/0703414500"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 hover:opacity-70 transition-opacity"
+            aria-label="Zalo"
           >
-            <h1 className="text-[13px] md:text-[15px] uppercase font-extrabold text-foreground mb-0.5 leading-none">
-              {album.title}
-            </h1>
-            <p className="text-[9px] md:text-[10px] uppercase font-bold text-accent leading-none">
-              {album.categoryName}
-            </p>
-          </motion.div>
-
-          {/* Spacer to keep title centered - updated to match new small button size */}
-          <div className="w-[34px]" />
+            <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 0C10.745 0 0 10.745 0 24s10.745 24 24 24 24-10.745 24-24S37.255 0 24 0z" fill="#0068FF" />
+              <path d="M33.6 15.9H14.4c-.83 0-1.5.67-1.5 1.5v13.2c0 .83.67 1.5 1.5 1.5h7.35l3.15 3.15c.29.29.77.29 1.06 0l3.15-3.15h4.5c.83 0 1.5-.67 1.5-1.5V17.4c-.01-.83-.68-1.5-1.5-1.5z" fill="white" />
+              <text x="17" y="28" fontFamily="Arial" fontWeight="bold" fontSize="10" fill="#0068FF">ZL</text>
+            </svg>
+          </a>
         </div>
-      </nav>
+      </header>
 
-      {/* ─── PHOTO GRID ─── */}
-      <main className="pt-20 md:pt-32 pb-20 px-4 md:px-10 max-w-screen-2xl mx-auto w-full">
-        <div className="columns-1 md:columns-2 lg:columns-3 gap-4 md:gap-6 space-y-4 md:space-y-6">
+      {/* ═══════════════════════════════════════
+          ALBUM TITLE SECTION
+         ═══════════════════════════════════════ */}
+      <div className="w-full bg-white py-4 relative">
+        <div className="max-w-[2000px] mx-auto px-6 flex items-center justify-between">
+          <Link
+            to="/"
+            className="group flex items-center gap-2 text-black hover:opacity-50 transition-all duration-300"
+          >
+            <div className="w-8 h-8 rounded-full border border-black/5 flex items-center justify-center group-hover:border-black/20 transition-colors">
+              <ArrowLeft size={14} strokeWidth={1.5} />
+            </div>
+            <span className="text-xs font-body font-bold uppercase hidden sm:inline-block">
+              Back
+            </span>
+          </Link>
+
+          <h1 className="flex-1 font-body text-xs md:text-sm font-bold uppercase text-center text-black pr-8 sm:pr-14">
+            {album.title}
+          </h1>
+
+          {/* Spacer to keep title centered */}
+          <div className="w-8 sm:w-14" />
+        </div>
+      </div>
+
+      <main className="pb-32 px-4 md:px-12 max-w-[2000px] mx-auto w-full flex-1">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {photos.map((photo, index) => (
             <motion.div
               key={photo.id}
@@ -175,14 +203,14 @@ export default function AlbumPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: index * 0.05 }}
-              className="group relative overflow-hidden cursor-pointer rounded-xl bg-muted"
+              className="group relative overflow-hidden cursor-pointer rounded-xl bg-muted aspect-[4/5]"
               onClick={() => setLightboxIndex(index)}
             >
               <img
                 src={photo.url}
                 alt={photo.caption || ""}
                 loading="lazy"
-                className="w-full h-auto object-cover img-zoom"
+                className="w-full h-full object-cover img-zoom"
               />
               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </motion.div>
@@ -201,7 +229,7 @@ export default function AlbumPage() {
         {lightboxIndex !== null && (
           <Lightbox
             photos={photos.map((p) => ({ id: p.id, src: p.url, alt: p.caption || "" }))}
-            currentIndex={lightboxIndex}
+            currentIndex={lightboxIndex as number}
             onClose={closeLightbox}
             onPrev={goToPrev}
             onNext={goToNext}

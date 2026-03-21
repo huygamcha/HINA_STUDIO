@@ -46,8 +46,13 @@ export interface Photo {
 }
 
 /** Category helpers */
-export async function getCategories(): Promise<Category[]> {
-  const categories = await (prisma as any).category.findMany({
+export async function getCategories(): Promise<(Category & { _count: { albums: number } })[]> {
+  const categories = await prisma.category.findMany({
+    include: {
+      _count: {
+        select: { albums: true }
+      }
+    },
     orderBy: { sortOrder: "asc" },
   });
   return categories.map((c: any) => ({
@@ -55,6 +60,7 @@ export async function getCategories(): Promise<Category[]> {
     name: c.name,
     slug: c.slug,
     sort_order: c.sortOrder,
+    _count: c._count
   }));
 }
 
@@ -84,9 +90,14 @@ export async function deleteCategory(id: string) {
 }
 
 /** Fetch all albums with category info */
-export async function getAlbums(): Promise<Album[]> {
+export async function getAlbums(): Promise<(Album & { _count: { photos: number } })[]> {
   const albums = await prisma.album.findMany({
-    include: { category: true },
+    include: { 
+      category: true,
+      _count: {
+        select: { photos: true }
+      }
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -100,6 +111,7 @@ export async function getAlbums(): Promise<Album[]> {
     categorySlug: a.category.slug,
     cover_url: a.coverUrl,
     created_at: a.createdAt.toISOString(),
+    _count: a._count
   }));
 }
 
@@ -193,6 +205,75 @@ export async function addPhotosToAlbum(
   });
 
   return getAlbumPhotos(photos[0].album_id);
+}
+
+/** Fetch a single album by ID */
+export async function getAlbumById(id: string): Promise<Album | null> {
+  const album = await prisma.album.findUnique({
+    where: { id },
+    include: { category: true },
+  });
+
+  if (!album) return null;
+
+  return {
+    id: album.id,
+    slug: album.slug,
+    title: album.title,
+    description: album.description,
+    categoryId: album.categoryId,
+    categoryName: album.category.name,
+    categorySlug: album.category.slug,
+    cover_url: album.coverUrl,
+    created_at: album.createdAt.toISOString(),
+  };
+}
+
+/** Update an album */
+export async function updateAlbum(id: string, data: {
+  title?: string;
+  slug?: string;
+  description?: string;
+  categoryId?: string;
+  cover_url?: string;
+}): Promise<Album> {
+  const updated = await prisma.album.update({
+    where: { id },
+    data: {
+      title: data.title,
+      slug: data.slug,
+      description: data.description,
+      categoryId: data.categoryId,
+      coverUrl: data.cover_url,
+    },
+    include: { category: true },
+  });
+
+  return {
+    id: updated.id,
+    slug: updated.slug,
+    title: updated.title,
+    description: updated.description,
+    categoryId: updated.categoryId,
+    categoryName: updated.category.name,
+    categorySlug: updated.category.slug,
+    cover_url: updated.coverUrl,
+    created_at: updated.createdAt.toISOString(),
+  };
+}
+
+/** Synchronize album photos (delete existing and replace with new set) */
+export async function syncAlbumPhotos(albumId: string, photos: { url: string, sort_order: number }[]) {
+  return prisma.$transaction([
+    prisma.photo.deleteMany({ where: { albumId } }),
+    prisma.photo.createMany({
+      data: photos.map(p => ({
+        albumId,
+        url: p.url,
+        sortOrder: p.sort_order
+      }))
+    })
+  ]);
 }
 
 /** Delete an album and its photos */

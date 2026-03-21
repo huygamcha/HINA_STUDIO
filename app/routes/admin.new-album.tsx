@@ -12,6 +12,62 @@ import {
 import { generatePresignedUploadUrl, buildObjectKey } from "~/utils/s3.server";
 import { createAlbum, addPhotosToAlbum, getCategories } from "~/utils/supabase.server";
 
+/** UTILITY: Convert image to WebP (Quality 0.85 by default) */
+async function convertFileToWebP(file: File, quality = 0.85): Promise<{ blob: Blob; filename: string }> {
+  return new Promise((resolve, reject) => {
+    // If it's not an image, just return original (though we only accept image/*)
+    if (!file.type.startsWith("image/")) {
+      return resolve({ blob: file, filename: file.name });
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        
+        // Basic resolution check: if extremely large, maybe downscale a bit for web
+        let width = img.width;
+        let height = img.height;
+        const MAX_DIM = 3200; // Cap at 3200px (4K-ish) for web display
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const name = file.name.replace(/\.[^/.]+$/, "");
+              resolve({ blob, filename: `${name}.webp` });
+            } else {
+              reject(new Error("WebP conversion failed (blob null)"));
+            }
+          },
+          "image/webp",
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
+    };
+    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+  });
+}
+
 export async function loader() {
   const categories = await getCategories();
   return { categories };
@@ -30,22 +86,27 @@ export async function action({ request }: { request: Request }) {
   const intent = formData.get("intent") as string;
 
   if (intent === "get-upload-urls") {
-    const filesJson = formData.get("files") as string;
-    const albumId = formData.get("albumId") as string;
-    const files: { name: string; type: string }[] = JSON.parse(filesJson);
+    try {
+      const filesJson = formData.get("files") as string;
+      const albumId = formData.get("albumId") as string;
+      const files: { name: string; type: string }[] = JSON.parse(filesJson);
 
-    const urls = await Promise.all(
-      files.map(async (file) => {
-        const key = buildObjectKey(albumId, file.name);
-        const { uploadUrl, publicUrl } = await generatePresignedUploadUrl(
-          key,
-          file.type
-        );
-        return { uploadUrl, publicUrl, fileName: file.name };
-      })
-    );
+      const urls = await Promise.all(
+        files.map(async (file) => {
+          const key = buildObjectKey(albumId, file.name);
+          const { uploadUrl, publicUrl } = await generatePresignedUploadUrl(
+            key,
+            file.type
+          );
+          return { uploadUrl, publicUrl, fileName: file.name };
+        })
+      );
 
-    return { intent: "upload-urls", urls };
+      return { intent: "upload-urls", urls };
+    } catch (err) {
+      console.error("Action error:", err);
+      return { intent: "error", error: err instanceof Error ? err.message : "Failed to generate upload URLs" };
+    }
   }
 
   if (intent === "create-album") {
@@ -141,40 +202,72 @@ export default function NewAlbumPage() {
     const albumId = crypto.randomUUID();
 
     try {
-      // 1. Get presigned URLs from server
+      const updatedFiles = [...files];
+      const preparedFiles: { blob: Blob; filename: string }[] = [];
+
+      // 1. Convert ALL files to WebP locally first
+      for (let i = 0; i < updatedFiles.length; i++) {
+        updatedFiles[i].status = "uploading";
+        updatedFiles[i].progress = 10; // "Preparing"
+        setFiles([...updatedFiles]);
+
+        try {
+          const { blob, filename } = await convertFileToWebP(updatedFiles[i].file);
+          preparedFiles.push({ blob, filename });
+        } catch (err) {
+          console.error("Conversion error:", err);
+          updatedFiles[i].status = "error";
+          // Try to fallback to original if conversion fails
+          preparedFiles.push({ blob: updatedFiles[i].file, filename: updatedFiles[i].file.name });
+        }
+      }
+
+      // 2. Get presigned URLs from server for the .webp files
       const formData = new FormData();
       formData.set("intent", "get-upload-urls");
       formData.set("albumId", albumId);
       formData.set(
         "files",
-        JSON.stringify(files.map((f) => ({ name: f.file.name, type: f.file.type })))
+        JSON.stringify(preparedFiles.map((f) => ({ 
+          name: f.filename, 
+          type: "image/webp" 
+        })))
       );
 
-      const res = await fetch("/admin/new-album", { method: "POST", body: formData });
+      const res = await fetch("/admin/new-album", { 
+        method: "POST", 
+        body: formData,
+        headers: { "Accept": "application/json" }
+      });
       const data = await res.json();
 
+      if (data.intent === "error") throw new Error(data.error);
       if (!data.urls) throw new Error("Failed to get upload URLs");
 
-      // 2. Upload each file directly to R2
-      const updatedFiles = [...files];
+      // 3. Upload each converted blob directly to R2
       const publicUrls: string[] = [];
 
       for (let i = 0; i < updatedFiles.length; i++) {
+        if (updatedFiles[i].status === "error") continue;
+        
         updatedFiles[i].status = "uploading";
+        updatedFiles[i].progress = 50;
         setFiles([...updatedFiles]);
 
         try {
+          const { blob, filename } = preparedFiles[i];
           await fetch(data.urls[i].uploadUrl, {
             method: "PUT",
-            body: updatedFiles[i].file,
-            headers: { "Content-Type": updatedFiles[i].file.type },
+            body: blob,
+            headers: { "Content-Type": "image/webp" },
           });
 
           updatedFiles[i].status = "done";
           updatedFiles[i].progress = 100;
           updatedFiles[i].publicUrl = data.urls[i].publicUrl;
           publicUrls.push(data.urls[i].publicUrl);
-        } catch {
+        } catch (err) {
+          console.error("Upload error:", err);
           updatedFiles[i].status = "error";
         }
 

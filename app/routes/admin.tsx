@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from "react-router";
 import {
   Camera,
   LayoutDashboard,
-  PlusCircle,
+  FolderOpen,
   LogOut,
   Tag,
 } from "lucide-react";
@@ -31,7 +31,7 @@ export default function AdminLayout() {
 
   const navItems = [
     { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/admin/new-album", label: "New Album", icon: PlusCircle },
+    { to: "/admin/albums", label: "Albums", icon: FolderOpen },
     { to: "/admin/categories", label: "Categories", icon: Tag },
   ];
 
