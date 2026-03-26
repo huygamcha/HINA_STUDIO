@@ -38,6 +38,7 @@ const ALBUMS = [
     description: "A cinematic exploration of high-altitude landscapes and ethereal light.",
     category_slug: "beauty",
     cover_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80",
+    thumbnail_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80",
   },
   {
     slug: "urban-rhythms",
@@ -45,6 +46,7 @@ const ALBUMS = [
     description: "Street photography capturing the quiet moments in bustling cities.",
     category_slug: "beauty",
     cover_url: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=1200&q=80",
+    thumbnail_url: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=600&q=80",
   },
   {
     slug: "minimalist-muse",
@@ -52,6 +54,7 @@ const ALBUMS = [
     description: "Editorial lookbook focusing on clean lines and monochromatic tones.",
     category_slug: "beauty",
     cover_url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1200&q=80",
+    thumbnail_url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80",
   },
   {
     slug: "golden-hour-weddings",
@@ -59,6 +62,7 @@ const ALBUMS = [
     description: "Warm, candid moments from intimate ceremonies.",
     category_slug: "sinh-nhat",
     cover_url: "https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&q=80",
+    thumbnail_url: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80",
   },
 ];
 
@@ -102,8 +106,8 @@ async function seed() {
       const categoryId = categoryMap[albumData.category_slug];
 
       const [album] = await sql`
-        INSERT INTO albums (slug, title, description, category_id, cover_url)
-        VALUES (${albumData.slug}, ${albumData.title}, ${albumData.description}, ${categoryId}, ${albumData.cover_url})
+        INSERT INTO albums (slug, title, description, category_id, cover_url, thumbnail_url)
+        VALUES (${albumData.slug}, ${albumData.title}, ${albumData.description}, ${categoryId}, ${albumData.cover_url}, ${albumData.thumbnail_url})
         RETURNING id, title
       `;
 

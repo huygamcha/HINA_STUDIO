@@ -88,14 +88,14 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8 lg:p-12 animate-in fade-in duration-700">
+    <div className="max-w-8xl mx-auto p-4 md:p-8 animate-in fade-in duration-700">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div className="space-y-1">
-          <h1 className="text-4xl font-light  text-foreground flex items-center gap-3">
-            Portfolio <span className="font-semibold text-accent">Categories</span>
+          <h1 className="text-4xl font-light   flex items-center gap-3">
+            Portfolio <span className="font-semibold ">Categories</span>
           </h1>
-          <p className="text-muted-foreground font-light text-base max-w-md leading-relaxed">
+          <p className=" font-light text-base max-w-md leading-relaxed">
             Organize your albums and photos into distinct gallery sections.
           </p>
         </div>
@@ -115,7 +115,7 @@ export default function CategoriesPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mb-8 p-4 bg-destructive/5 border border-destructive/20 rounded-2xl flex items-start gap-3 text-destructive text-sm"
+          className="mb-8 p-4 bg-destructive/5 border border-destructive/20 rounded-2xl flex items-start gap-3  text-sm"
         >
           <AlertCircle size={18} className="mt-0.5 shrink-0" />
           <div>
@@ -137,29 +137,29 @@ export default function CategoriesPage() {
             >
               <div className="flex flex-col md:flex-row gap-6 mb-6">
                 <div className="flex-1 space-y-2">
-                  <label className="text-xs font-semibold uppercase  text-muted-foreground ml-1">Name</label>
+                  <label className="text-xs font-semibold uppercase   ml-1">Name</label>
                   <input
                     autoFocus
                     value={name}
                     onChange={(e) => autoSlug(e.target.value)}
                     placeholder="e.g. Portrait Photography"
-                    className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all placeholder:text-muted-foreground/50"
+                    className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all placeholder:/50"
                   />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <label className="text-xs font-semibold uppercase  text-muted-foreground ml-1">Url Slug</label>
+                  <label className="text-xs font-semibold uppercase   ml-1">Url Slug</label>
                   <div className="relative">
-                    <Tag size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Tag size={14} className="absolute left-4 top-1/2 -translate-y-1/2 " />
                     <input
                       value={slug}
                       onChange={(e) => setSlug(e.target.value)}
                       placeholder="portrait-photography"
-                      className="w-full bg-background border border-border/50 rounded-xl pl-10 pr-4 py-3 text-sm font-mono focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
+                      className="w-full bg-background border border-border/50 rounded-xl pl-10 pr-4 py-3 text-sm  focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
                     />
                   </div>
                 </div>
                 <div className="w-full md:w-32 space-y-2">
-                  <label className="text-xs font-semibold uppercase  text-muted-foreground ml-1 text-center block">Sort Index</label>
+                  <label className="text-xs font-semibold uppercase   ml-1 text-center block">Sort Index</label>
                   <input
                     type="number"
                     value={sortOrder}
@@ -171,7 +171,7 @@ export default function CategoriesPage() {
               <div className="flex justify-end gap-3">
                 <button
                   onClick={resetForm}
-                  className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-xl transition-colors"
+                  className="px-5 py-2.5 text-sm font-medium  hover:bg-muted rounded-xl transition-colors"
                 >
                   Cancel
                 </button>
@@ -197,12 +197,12 @@ export default function CategoriesPage() {
         <div className="grid gap-4">
           {categories.length === 0 && !isAdding && (
             <div className="py-24 text-center border-2 border-dashed border-border/50 rounded-3xl space-y-4">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground/50">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto /50">
                 <Tag size={32} />
               </div>
               <div className="space-y-1">
-                <p className="text-lg font-medium text-foreground">No categories yet</p>
-                <p className="text-sm text-muted-foreground">Start by creating your first organizational category.</p>
+                <p className="text-lg font-medium ">No categories yet</p>
+                <p className="text-sm ">Start by creating your first organizational category.</p>
               </div>
             </div>
           )}
@@ -221,7 +221,7 @@ export default function CategoriesPage() {
                   <div className="p-6">
                     <div className="flex flex-col md:flex-row gap-6 mb-6">
                       <div className="flex-1 space-y-2">
-                        <label className="text-xs font-semibold uppercase  text-muted-foreground ml-1">Name</label>
+                        <label className="text-xs font-semibold uppercase   ml-1">Name</label>
                         <input
                           autoFocus
                           value={name}
@@ -230,15 +230,15 @@ export default function CategoriesPage() {
                         />
                       </div>
                       <div className="flex-1 space-y-2">
-                        <label className="text-xs font-semibold uppercase  text-muted-foreground ml-1 text-center block">Url Slug</label>
+                        <label className="text-xs font-semibold uppercase   ml-1 text-center block">Url Slug</label>
                         <input
                           value={slug}
                           onChange={(e) => setSlug(e.target.value)}
-                          className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
+                          className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm  focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
                         />
                       </div>
                       <div className="w-full md:w-32 space-y-2">
-                        <label className="text-xs font-semibold uppercase  text-muted-foreground ml-1 text-center block">Sort Index</label>
+                        <label className="text-xs font-semibold uppercase   ml-1 text-center block">Sort Index</label>
                         <input
                           type="number"
                           value={sortOrder}
@@ -250,7 +250,7 @@ export default function CategoriesPage() {
                     <div className="flex justify-end gap-3 border-t border-border/50 pt-6">
                       <button
                         onClick={resetForm}
-                        className="px-5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted rounded-xl transition-colors"
+                        className="px-5 py-2.5 text-sm font-medium  hover:bg-muted rounded-xl transition-colors"
                       >
                         Cancel
                       </button>
@@ -274,22 +274,22 @@ export default function CategoriesPage() {
                 ) : (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 md:p-6">
                     <div className="flex items-center gap-6">
-                      <div className="w-12 h-12 bg-accent/5 rounded-2xl flex items-center justify-center text-accent ring-1 ring-accent/10">
+                      <div className="w-12 h-12 bg-accent/5 rounded-2xl flex items-center justify-center  ring-1 ring-accent/10">
                         <Tag size={20} strokeWidth={1.5} />
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-medium text-foreground ">{cat.name}</h3>
-                          <span className="hidden sm:inline-flex px-2 py-0.5 bg-muted text-muted-foreground text-[10px] font-bold uppercase  rounded-full ring-1 ring-border/50">
+                          <h3 className="text-lg font-medium  ">{cat.name}</h3>
+                          <span className="hidden sm:inline-flex px-2 py-0.5 bg-muted  text-[10px] font-bold uppercase  rounded-full ring-1 ring-border/50">
                             {cat.slug}
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 text-xs font-light text-muted-foreground uppercase ">
+                        <div className="flex items-center gap-4 text-xs font-light  uppercase ">
                           <span className="flex items-center gap-1.5 bg-foreground/5 px-2 py-0.5 rounded-full ring-1 ring-foreground/5">
-                            Index: <span className="font-bold text-foreground">{cat.sort_order}</span>
+                            Index: <span className="font-bold ">{cat.sort_order}</span>
                           </span>
                           <span className="flex items-center gap-1.5 bg-foreground/5 px-2 py-0.5 rounded-full ring-1 ring-foreground/5">
-                            Albums: <span className="font-bold text-accent">{cat._count?.albums ?? 0}</span>
+                            Albums: <span className="font-bold ">{cat._count?.albums ?? 0}</span>
                           </span>
                         </div>
                       </div>
@@ -298,7 +298,7 @@ export default function CategoriesPage() {
                     <div className="flex justify-end gap-3 mt-6 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-border/50">
                       <button
                         onClick={() => startEdit(cat)}
-                        className="p-3 text-muted-foreground hover:text-accent hover:bg-accent/5 rounded-2xl transition-all group/btn"
+                        className="p-3  hover: hover:bg-accent/5 rounded-2xl transition-all group/btn"
                         title="Edit Category"
                       >
                         <Edit2 size={20} strokeWidth={1.5} className="group-hover/btn:scale-110 transition-transform" />
@@ -313,7 +313,7 @@ export default function CategoriesPage() {
                         <button
                           type="submit"
                           disabled={cat._count?.albums > 0}
-                          className="p-3 text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-2xl transition-all group/btn disabled:opacity-30 disabled:hover:bg-transparent"
+                          className="p-3  hover: hover:bg-destructive/5 rounded-2xl transition-all group/btn disabled:opacity-30 disabled:hover:bg-transparent"
                           title={cat._count?.albums > 0 ? "Cannot delete category with albums" : "Delete Category"}
                         >
                           <Trash2 size={20} strokeWidth={1.5} className="group-hover/btn:scale-110 transition-transform" />

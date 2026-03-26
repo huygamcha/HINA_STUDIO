@@ -67,7 +67,7 @@ export default function HomePage() {
           HEADER — Logo left, Nav right
          ═══════════════════════════════════════ */}
       <header className="sticky top-0 z-50 bg-white border-b border-black/5">
-        <div className="w-full px-6 md:px-10 flex items-center justify-between h-16 md:h-[72px]">
+        <div className="max-w-[1280px] mx-auto px-6 md:px-12 flex items-center justify-between h-16 md:h-[72px]">
           {/* Logo */}
           <Link to="/" className="shrink-0">
             <span className="font-body text-2xl md:text-3xl font-semibold text-black uppercase">
@@ -99,7 +99,7 @@ export default function HomePage() {
           CATEGORY FILTER PILLS
          ═══════════════════════════════════════ */}
       <div className="w-full bg-white py-4">
-        <div className="flex items-center justify-center gap-2 md:gap-3 px-4 flex-wrap">
+        <div className="max-w-[1280px] mx-auto px-6 md:px-12 flex items-center justify-center gap-2 md:gap-3 flex-wrap">
           {/* "All" pill */}
           <button
             onClick={() => handleCategoryChange("all")}
@@ -128,7 +128,7 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════
           GALLERY GRID — Dark background, dense layout
          ═══════════════════════════════════════ */}
-      <main className="pb-32 px-4 md:px-12 max-w-[2000px] mx-auto w-full flex-1 bg-white">
+      <main className="pb-32 px-4 md:px-12 max-w-[1280px] mx-auto w-full flex-1 bg-white">
         <AnimatePresence mode="popLayout">
           <motion.div
             layout
@@ -154,6 +154,7 @@ export default function HomePage() {
                   <div className="relative aspect-[4/5] overflow-hidden">
                     <img
                       src={
+                        album.thumbnail_url ||
                         album.cover_url ||
                         "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80"
                       }

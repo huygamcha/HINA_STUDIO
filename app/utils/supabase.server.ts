@@ -33,6 +33,7 @@ export interface Album {
   categoryName?: string;
   categorySlug?: string;
   cover_url: string | null;
+  thumbnail_url: string | null;
   created_at: string;
 }
 
@@ -110,6 +111,7 @@ export async function getAlbums(): Promise<(Album & { _count: { photos: number }
     categoryName: a.category.name,
     categorySlug: a.category.slug,
     cover_url: a.coverUrl,
+    thumbnail_url: a.thumbnailUrl,
     created_at: a.createdAt.toISOString(),
     _count: a._count
   }));
@@ -133,6 +135,7 @@ export async function getAlbumBySlug(slug: string): Promise<Album | null> {
     categoryName: album.category.name,
     categorySlug: album.category.slug,
     cover_url: album.coverUrl,
+    thumbnail_url: album.thumbnailUrl,
     created_at: album.createdAt.toISOString(),
   };
 }
@@ -161,6 +164,7 @@ export async function createAlbum(album: {
   description?: string;
   categoryId: string;
   cover_url?: string;
+  thumbnail_url?: string;
 }): Promise<Album> {
   const created = await prisma.album.create({
     data: {
@@ -169,6 +173,7 @@ export async function createAlbum(album: {
       description: album.description,
       categoryId: album.categoryId,
       coverUrl: album.cover_url,
+      thumbnailUrl: album.thumbnail_url,
     },
     include: { category: true },
   });
@@ -182,6 +187,7 @@ export async function createAlbum(album: {
     categoryName: created.category.name,
     categorySlug: created.category.slug,
     cover_url: created.coverUrl,
+    thumbnail_url: created.thumbnailUrl,
     created_at: created.createdAt.toISOString(),
   };
 }
@@ -225,6 +231,7 @@ export async function getAlbumById(id: string): Promise<Album | null> {
     categoryName: album.category.name,
     categorySlug: album.category.slug,
     cover_url: album.coverUrl,
+    thumbnail_url: album.thumbnailUrl,
     created_at: album.createdAt.toISOString(),
   };
 }
@@ -236,6 +243,7 @@ export async function updateAlbum(id: string, data: {
   description?: string;
   categoryId?: string;
   cover_url?: string;
+  thumbnail_url?: string;
 }): Promise<Album> {
   const updated = await prisma.album.update({
     where: { id },
@@ -245,6 +253,7 @@ export async function updateAlbum(id: string, data: {
       description: data.description,
       categoryId: data.categoryId,
       coverUrl: data.cover_url,
+      thumbnailUrl: data.thumbnail_url,
     },
     include: { category: true },
   });
@@ -258,6 +267,7 @@ export async function updateAlbum(id: string, data: {
     categoryName: updated.category.name,
     categorySlug: updated.category.slug,
     cover_url: updated.coverUrl,
+    thumbnail_url: updated.thumbnailUrl,
     created_at: updated.createdAt.toISOString(),
   };
 }

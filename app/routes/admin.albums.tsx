@@ -13,7 +13,8 @@ import {
   AlertCircle,
   Loader2
 } from "lucide-react";
-import { getAlbums, deleteAlbum } from "~/utils/supabase.server";
+import { getAlbums, deleteAlbum, getAlbumPhotos } from "~/utils/supabase.server";
+import { deleteImageFromR2 } from "~/utils/s3.server";
 import { useState } from "react";
 
 export async function loader() {
@@ -28,6 +29,13 @@ export async function action({ request }: { request: Request }) {
   if (intent === "delete") {
     const id = formData.get("id") as string;
     try {
+      // 1. Get all photos in the album to clean up R2 (ReservationSystem pattern)
+      const photos = await getAlbumPhotos(id);
+      for (const photo of photos) {
+        await deleteImageFromR2(photo.url);
+      }
+
+      // 2. Delete the database record
       await deleteAlbum(id);
       return { success: true };
     } catch (e: any) {
@@ -52,14 +60,14 @@ export default function AlbumsPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 lg:p-12 animate-in fade-in duration-700">
+    <div className="max-w-8xl mx-auto p-4 md:p-8 animate-in fade-in duration-700">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div className="space-y-1">
-          <h1 className="text-4xl font-light  text-foreground flex items-center gap-3">
-            Portfolio <span className="font-semibold text-accent">Albums</span>
+          <h1 className="text-4xl font-light   flex items-center gap-3">
+            Portfolio <span className="font-semibold ">Albums</span>
           </h1>
-          <p className="text-muted-foreground font-light text-base max-w-md leading-relaxed">
+          <p className=" font-light text-base max-w-md leading-relaxed">
             Manage your photography collections, upload photos, and organize your work.
           </p>
         </div>
@@ -78,7 +86,7 @@ export default function AlbumsPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mb-8 p-4 bg-destructive/5 border border-destructive/20 rounded-2xl flex items-start gap-3 text-destructive text-sm"
+          className="mb-8 p-4 bg-destructive/5 border border-destructive/20 rounded-2xl flex items-start gap-3  text-sm"
         >
           <AlertCircle size={18} className="mt-0.5 shrink-0" />
           <div>
@@ -91,7 +99,7 @@ export default function AlbumsPage() {
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative flex-1">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 " />
           <input
             type="text"
             placeholder="Search by title or category..."
@@ -100,7 +108,7 @@ export default function AlbumsPage() {
             className="w-full bg-card border border-border/40 rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
           />
         </div>
-        <div className="flex items-center gap-4 px-4 bg-card border border-border/40 rounded-2xl text-xs font-medium text-muted-foreground">
+        <div className="flex items-center gap-4 px-4 bg-card border border-border/40 rounded-2xl text-xs font-medium ">
           <span>{filteredAlbums.length} {filteredAlbums.length === 1 ? 'Album' : 'Albums'}</span>
         </div>
       </div>
@@ -115,12 +123,12 @@ export default function AlbumsPage() {
               animate={{ opacity: 1 }}
               className="col-span-full py-24 text-center border-2 border-dashed border-border/50 rounded-3xl space-y-4"
             >
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground/50">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto /50">
                 <FolderOpen size={32} />
               </div>
               <div className="space-y-1">
-                <p className="text-lg font-medium text-foreground">No albums found</p>
-                <p className="text-sm text-muted-foreground">Try adjusting your search or create a new album.</p>
+                <p className="text-lg font-medium ">No albums found</p>
+                <p className="text-sm ">Try adjusting your search or create a new album.</p>
               </div>
             </motion.div>
           ) : (
@@ -143,7 +151,7 @@ export default function AlbumsPage() {
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                   ) : (
-                    <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground/30">
+                    <div className="w-full h-full bg-muted flex items-center justify-center /30">
                       <ImageIcon size={48} strokeWidth={1} />
                     </div>
                   )}
@@ -159,19 +167,19 @@ export default function AlbumsPage() {
                 {/* Content */}
                 <div className="p-6 flex-1 flex flex-col space-y-4">
                   <div className="space-y-1">
-                    <h3 className="text-xl font-semibold  text-foreground line-clamp-1">{album.title}</h3>
-                    <p className="text-xs font-mono text-muted-foreground uppercase  mb-1">{album.slug}</p>
+                    <h3 className="text-xl font-semibold   line-clamp-1">{album.title}</h3>
+                    <p className="text-xs   uppercase  mb-1">{album.slug}</p>
                   </div>
 
                   {album.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 font-light leading-relaxed">
+                    <p className="text-sm  line-clamp-2 font-light leading-relaxed">
                       {album.description}
                     </p>
                   )}
 
-                  <div className="flex items-center gap-4 text-[10px] font-bold uppercase  text-muted-foreground/70 mt-auto pt-4 border-t border-border/30">
+                  <div className="flex items-center gap-4 text-[10px] font-bold uppercase  /70 mt-auto pt-4 border-t border-border/30">
                     <div className="flex items-center gap-1.5">
-                      <ImageIcon size={14} className="text-accent" />
+                      <ImageIcon size={14} className="" />
                       <span>{album._count?.photos ?? 0} Photos</span>
                     </div>
                     <div className="flex items-center gap-1.5 ml-auto">
@@ -185,13 +193,13 @@ export default function AlbumsPage() {
                     <Link
                       to={`/album/${album.slug}`}
                       target="_blank"
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl text-xs font-semibold uppercase  transition-all"
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-muted/50 hover:bg-muted  hover: rounded-xl text-xs font-semibold uppercase  transition-all"
                     >
                       <ExternalLink size={14} /> View
                     </Link>
                     <Link
                       to={`/admin/edit-album/${album.id}`}
-                      className="p-2.5 text-muted-foreground hover:text-accent hover:bg-accent/5 rounded-xl transition-all"
+                      className="p-2.5  hover: hover:bg-accent/5 rounded-xl transition-all"
                       title="Edit Album"
                     >
                       <Edit2 size={18} strokeWidth={1.5} />
@@ -206,7 +214,7 @@ export default function AlbumsPage() {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="p-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-xl transition-all disabled:opacity-30"
+                        className="p-2.5  hover: hover:bg-destructive/5 rounded-xl transition-all disabled:opacity-30"
                         title="Delete Album"
                       >
                         {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} strokeWidth={1.5} />}

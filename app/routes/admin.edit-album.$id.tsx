@@ -12,59 +12,10 @@ import {
   ArrowLeft,
   Plus
 } from "lucide-react";
-import { generatePresignedUploadUrl, buildObjectKey } from "~/utils/s3.server";
+import { generatePresignedUploadUrl, buildObjectKey, uploadImageToR2, deleteImageFromR2 } from "~/utils/s3.server";
 import { updateAlbum, getAlbumById, getAlbumPhotos, syncAlbumPhotos, getCategories } from "~/utils/supabase.server";
 
-/** UTILITY: Convert image to WebP (Quality 0.85 by default) */
-async function convertFileToWebP(file: File, quality = 0.85): Promise<{ blob: Blob; filename: string }> {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith("image/")) {
-      return resolve({ blob: file, filename: file.name });
-    }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
-        const MAX_DIM = 3200; 
-        if (width > MAX_DIM || height > MAX_DIM) {
-          if (width > height) {
-            height = Math.round((height * MAX_DIM) / width);
-            width = MAX_DIM;
-          } else {
-            width = Math.round((width * MAX_DIM) / height);
-            height = MAX_DIM;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d")!;
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const name = file.name.replace(/\.[^/.]+$/, "");
-              resolve({ blob, filename: `${name}.webp` });
-            } else {
-              reject(new Error("WebP conversion failed"));
-            }
-          },
-          "image/webp",
-          quality
-        );
-      };
-      img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
-    };
-    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
-  });
-}
 
 export async function loader({ params }: { params: { id: string } }) {
   const album = await getAlbumById(params.id);
@@ -81,6 +32,30 @@ export async function action({ request, params }: { request: Request; params: { 
   const intent = formData.get("intent") as string;
   const albumId = params.id;
 
+  // Server-side upload (ReservationSystem pattern)
+  if (intent === "upload-images") {
+    try {
+      const files = formData.getAll("images") as File[];
+      if (!files || files.length === 0) return { intent: "error", error: "No files provided" };
+
+      const folder = `albums/${albumId}`;
+      const urls: string[] = [];
+
+      for (const file of files) {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const publicUrl = await uploadImageToR2(buffer, file.name, folder);
+        if (publicUrl) urls.push(publicUrl);
+      }
+
+      return { intent: "upload-urls", urls };
+    } catch (err) {
+      console.error("Server upload error:", err);
+      return { intent: "error", error: err instanceof Error ? err.message : "Failed to upload images" };
+    }
+  }
+
+  // Presigned URL fallback
   if (intent === "get-upload-urls") {
     try {
       const filesJson = formData.get("files") as string;
@@ -117,12 +92,22 @@ export async function action({ request, params }: { request: Request; params: { 
 
     const photoUrls: string[] = photosJson ? JSON.parse(photosJson) : [];
 
+    // R2 Cleanup: Identify removed photos and delete from R2 (ReservationSystem pattern)
+    const existingPhotos = await getAlbumPhotos(albumId);
+    const existingUrls = existingPhotos.map(p => p.url);
+    const removedUrls = existingUrls.filter(url => !photoUrls.includes(url));
+
+    for (const url of removedUrls) {
+      await deleteImageFromR2(url);
+    }
+
     await updateAlbum(albumId, {
       title,
       slug,
       description: description || undefined,
       categoryId,
       cover_url: photoUrls[0] || undefined,
+      thumbnail_url: photoUrls[0] || undefined,
     });
 
     await syncAlbumPhotos(
@@ -203,65 +188,49 @@ export default function EditAlbumPage() {
     setError(null);
 
     try {
-      const preparedFiles: { blob: Blob; filename: string }[] = [];
+      const updatedMedia = [...media];
 
-      // 1. Convert ALL pending files to WebP locally first
-      for (let i = 0; i < media.length; i++) {
-        if (media[i].status !== "pending") continue;
-
-        const { blob, filename } = await convertFileToWebP(media[i].file!);
-        preparedFiles.push({ blob, filename });
+      // Mark pending as uploading
+      for (let i = 0; i < updatedMedia.length; i++) {
+        if (updatedMedia[i].status === "pending") {
+          updatedMedia[i].status = "uploading";
+        }
       }
+      setMedia([...updatedMedia]);
 
-      // 2. Get presigned URLs from server for the .webp files
+      // Prepare FormData for server-side upload
       const formData = new FormData();
-      formData.set("intent", "get-upload-urls");
-      formData.set(
-        "files",
-        JSON.stringify(preparedFiles.map((f) => ({ 
-          name: f.filename, 
-          type: "image/webp" 
-        })))
-      );
+      formData.set("intent", "upload-images");
+      pendingItems.forEach(item => {
+        if (item.file) formData.append("images", item.file);
+      });
 
-      const res = await fetch(`/admin/edit-album/${album.id}`, { 
-        method: "POST", 
+      const res = await fetch(`/admin/edit-album/${album.id}`, {
+        method: "POST",
         body: formData,
         headers: { "Accept": "application/json" }
       });
       const data = await res.json();
 
       if (data.intent === "error") throw new Error(data.error);
-      if (!data.urls) throw new Error("Failed to get upload URLs");
+      if (!data.urls) throw new Error("Failed to upload images");
 
-      const tempMedia = [...media];
+      const finalMedia = [...media];
       let uploadIndex = 0;
 
-      for (let i = 0; i < tempMedia.length; i++) {
-        if (tempMedia[i].status !== "pending") continue;
-
-        const currentUpload = data.urls[uploadIndex];
-        tempMedia[i].status = "uploading";
-        setMedia([...tempMedia]);
-
-        try {
-          const { blob } = preparedFiles[uploadIndex];
-          await fetch(currentUpload.uploadUrl, {
-            method: "PUT",
-            body: blob,
-            headers: { "Content-Type": "image/webp" },
-          });
-
-          tempMedia[i].status = "done";
-          tempMedia[i].url = currentUpload.publicUrl;
-        } catch (err) {
-          console.error("Upload error:", err);
-          tempMedia[i].status = "error";
+      for (let i = 0; i < finalMedia.length; i++) {
+        if (finalMedia[i].status === "uploading") {
+          const url = data.urls[uploadIndex];
+          if (url) {
+            finalMedia[i].status = "done";
+            finalMedia[i].url = url;
+            uploadIndex++;
+          } else {
+            finalMedia[i].status = "error";
+          }
         }
-
-        uploadIndex++;
-        setMedia([...tempMedia]);
       }
+      setMedia([...finalMedia]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -272,7 +241,7 @@ export default function EditAlbumPage() {
   const currentUrls = media.filter(m => m.status === "done" && m.url).map(m => m.url);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 lg:p-12 animate-in fade-in duration-700">
+    <div className="max-w-8xl mx-auto p-4 md:p-8 animate-in fade-in duration-700">
       <div className="flex items-center gap-4 mb-8">
         <button
           onClick={() => navigate("/admin/albums")}
@@ -281,15 +250,15 @@ export default function EditAlbumPage() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-3xl font-light  text-foreground">
-            Edit <span className="font-semibold text-accent">Album</span>
+          <h1 className="text-3xl font-light  ">
+            Edit <span className="font-semibold ">Album</span>
           </h1>
-          <p className="text-muted-foreground text-sm">Update album details and manage photos.</p>
+          <p className=" text-sm">Update album details and manage photos.</p>
         </div>
       </div>
 
       {(error || (actionData as any)?.error) && (
-        <div className="mb-8 p-4 bg-destructive/5 border border-destructive/20 rounded-2xl flex items-start gap-3 text-destructive text-sm">
+        <div className="mb-8 p-4 bg-destructive/5 border border-destructive/20 rounded-2xl flex items-start gap-3  text-sm">
           <AlertCircle size={18} className="mt-0.5" />
           <p>{error || (actionData as any)?.error}</p>
         </div>
@@ -312,7 +281,7 @@ export default function EditAlbumPage() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase  text-muted-foreground ml-1">Title</label>
+                <label className="text-xs font-bold uppercase   ml-1">Title</label>
                 <input
                   value={title}
                   onChange={(e) => {
@@ -324,16 +293,16 @@ export default function EditAlbumPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase  text-muted-foreground ml-1">Url Slug</label>
+                <label className="text-xs font-bold uppercase   ml-1">Url Slug</label>
                 <input
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
-                  className="w-full bg-background border border-border/50 rounded-2xl px-5 py-3 font-mono text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
+                  className="w-full bg-background border border-border/50 rounded-2xl px-5 py-3  text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase  text-muted-foreground ml-1">Description</label>
+                <label className="text-xs font-bold uppercase   ml-1">Description</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -343,7 +312,7 @@ export default function EditAlbumPage() {
               </div>
 
               <div className="space-y-4 pt-2">
-                <label className="text-xs font-bold uppercase  text-muted-foreground ml-1">Category</label>
+                <label className="text-xs font-bold uppercase   ml-1">Category</label>
                 <div className="flex flex-wrap gap-2">
                   {categories.map((cat) => (
                     <button
@@ -352,7 +321,7 @@ export default function EditAlbumPage() {
                       onClick={() => setCategoryId(cat.id)}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${categoryId === cat.id
                         ? "bg-accent text-white shadow-lg shadow-accent/20"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        : "bg-muted  hover:bg-muted/80"
                         }`}
                     >
                       {cat.name}
@@ -367,12 +336,12 @@ export default function EditAlbumPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 Album Photos
-                <span className="text-xs font-normal text-muted-foreground ml-2">({media.length})</span>
+                <span className="text-xs font-normal  ml-2">({media.length})</span>
               </h2>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+                className="flex items-center gap-2 text-sm font-medium  hover:/80 transition-colors"
               >
                 <Plus size={18} /> Add Photos
               </button>
@@ -435,7 +404,7 @@ export default function EditAlbumPage() {
                   type="button"
                   onClick={handleUploadNewOnes}
                   disabled={isUploading}
-                  className="w-full py-4 bg-accent/5 hover:bg-accent/10 text-accent border border-accent/20 rounded-2xl text-sm font-bold uppercase  transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                  className="w-full py-4 bg-accent/5 hover:bg-accent/10  border border-accent/20 rounded-2xl text-sm font-bold uppercase  transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                 >
                   {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
                   {isUploading ? "Uploading..." : `Upload ${media.filter(m => m.status === "pending").length} New Photos`}
@@ -447,9 +416,9 @@ export default function EditAlbumPage() {
 
         {/* Sidebar / Actions */}
         <div className="space-y-6">
-          <section className="bg-card border border-border/40 rounded-3xl p-6 space-y-6 shadow-xl sticky top-8">
-            <h3 className="font-semibold text-foreground">Save Changes</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
+          <section className="bg-card border border-border/40 rounded-3xl p-6 md:p-8 space-y-6 shadow-sm">
+            <h3 className="font-semibold ">Save Changes</h3>
+            <p className="text-xs  leading-relaxed">
               Ensure all your photos are uploaded (status: Done) before publishing updates.
             </p>
 
@@ -473,7 +442,7 @@ export default function EditAlbumPage() {
               <button
                 type="button"
                 onClick={() => navigate("/admin/albums")}
-                className="w-full py-3 text-muted-foreground hover:bg-muted rounded-2xl text-xs font-semibold uppercase  transition-all"
+                className="w-full py-3  hover:bg-muted rounded-2xl text-xs font-semibold uppercase  transition-all"
               >
                 Discard Changes
               </button>
@@ -481,12 +450,12 @@ export default function EditAlbumPage() {
 
             <div className="pt-6 border-t border-border/30 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
+                <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center ">
                   <CheckCircle size={20} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-foreground">Photos Ready</p>
-                  <p className="text-[10px] text-muted-foreground uppercase">{media.filter(m => m.status === "done").length} Cloud Assets</p>
+                  <p className="text-xs font-bold ">Photos Ready</p>
+                  <p className="text-[10px]  uppercase">{media.filter(m => m.status === "done").length} Cloud Assets</p>
                 </div>
               </div>
             </div>

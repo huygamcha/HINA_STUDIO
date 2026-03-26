@@ -69,14 +69,14 @@ export default function LoginPage() {
         <div className="text-center mb-10">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-foreground hover:text-accent transition-colors"
+            className="inline-flex items-center gap-2  hover: transition-colors"
           >
             <Camera size={24} strokeWidth={1.5} />
             <span className="text-xl font-medium uppercase">
               Tiệm ảnh Hina
             </span>
           </Link>
-          <p className="text-muted-foreground text-sm font-medium mt-3">
+          <p className=" text-sm font-medium mt-3">
             Studio Administration
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function LoginPage() {
         {/* Form card */}
         <div className="bg-card border border-border/50 p-8 rounded-lg shadow-sm">
           <div className="flex items-center gap-2 mb-6">
-            <Lock size={16} strokeWidth={1.5} className="text-accent" />
+            <Lock size={16} strokeWidth={1.5} className="" />
             <h1 className="text-lg font-medium">Sign In</h1>
           </div>
 
@@ -92,7 +92,7 @@ export default function LoginPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm font-medium"
+              className="mb-6 p-3 bg-destructive/10 border border-destructive/20 rounded-md  text-sm font-medium"
             >
               {actionData.error}
             </motion.div>
@@ -102,7 +102,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-muted-foreground"
+                className="block text-sm font-medium "
               >
                 Email
               </label>
@@ -113,14 +113,14 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 placeholder="admin@studio.com"
-                className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
+                className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:/50 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
               />
             </div>
 
             <div className="space-y-2">
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-muted-foreground"
+                className="block text-sm font-medium "
               >
                 Password
               </label>
@@ -132,12 +132,12 @@ export default function LoginPage() {
                   required
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 pr-12 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
+                  className="w-full px-4 py-3 pr-12 bg-background border border-border rounded-md text-sm font-medium placeholder:/50 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2  hover: transition-colors cursor-pointer"
                 >
                   {showPassword ? (
                     <EyeOff size={18} strokeWidth={1.5} />
@@ -157,8 +157,8 @@ export default function LoginPage() {
           </Form>
         </div>
 
-        <p className="text-center mt-6 text-xs text-muted-foreground font-medium">
-          <Link to="/" className="hover:text-foreground transition-colors">
+        <p className="text-center mt-6 text-xs  font-medium">
+          <Link to="/" className="hover: transition-colors">
             ← Back to Portfolio
           </Link>
         </p>

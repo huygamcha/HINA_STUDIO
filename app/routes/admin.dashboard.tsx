@@ -1,6 +1,14 @@
 import { Link, useLoaderData } from "react-router";
 import { motion } from "framer-motion";
-import { PlusCircle, Image, FolderOpen, Tag } from "lucide-react";
+import { 
+  PlusCircle, 
+  Image as ImageIcon, 
+  FolderOpen, 
+  Tag, 
+  ArrowUpRight, 
+  ArrowRight,
+  Plus
+} from "lucide-react";
 import { prisma } from "~/utils/db.server";
 
 export async function loader() {
@@ -12,9 +20,27 @@ export async function loader() {
 
   return {
     stats: [
-      { label: "Total Categories", value: categoryCount.toString(), trend: "Organization" },
-      { label: "Total Albums", value: albumCount.toString(), trend: "Portfolio Items" },
-      { label: "Total Photos", value: photoCount.toString(), trend: "Visual Assets" },
+      { 
+        label: "Total Categories", 
+        value: categoryCount, 
+        trend: "Increased from last month", 
+        icon: Tag,
+        highlight: true 
+      },
+      { 
+        label: "Total Albums", 
+        value: albumCount, 
+        trend: "Increased from last month", 
+        icon: FolderOpen,
+        highlight: false 
+      },
+      { 
+        label: "Total Photos", 
+        value: photoCount, 
+        trend: "Increased from last month", 
+        icon: ImageIcon,
+        highlight: false 
+      },
     ]
   };
 }
@@ -30,100 +56,82 @@ export default function AdminDashboard() {
   const { stats } = useLoaderData<typeof loader>();
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="mb-10"
-      >
-        <h1 className="text-4xl font-light  mb-2">Admin <span className="font-semibold text-accent">Dashboard</span></h1>
-        <p className="text-muted-foreground font-light text-lg">
-          Overview and quick management of your photography studio.
-        </p>
-      </motion.div>
+    <div className="p-8 md:p-12 max-w-7xl mx-auto space-y-12">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-4xl font-bold mb-3">Dashboard</h1>
+          <p className="text-muted-foreground font-medium">
+            Plan, prioritize, and accomplish your studio tasks with ease.
+          </p>
+        </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        {stats.map((stat, i) => {
-          const Icon = stat.label === "Total Categories" ? Tag :
-            stat.label === "Total Albums" ? FolderOpen : Image;
-          return (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-              className="group bg-card border border-border/40 rounded-3xl p-8 space-y-4 hover:shadow-2xl hover:shadow-accent/5 transition-all duration-300"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 bg-accent/5 rounded-2xl flex items-center justify-center text-accent ring-1 ring-accent/10 group-hover:bg-accent group-hover:text-white transition-colors duration-500">
-                  <Icon size={24} strokeWidth={1.5} />
-                </div>
-                <span className="text-[10px] uppercase  text-muted-foreground font-bold bg-muted px-2 py-1 rounded-full">{stat.trend}</span>
-              </div>
-              <div>
-                <p className="text-4xl font-semibold er">{stat.value}</p>
-                <p className="text-sm text-muted-foreground font-medium uppercase  mt-1">{stat.label}</p>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.3 }}
-      >
-        <h2 className="text-xl font-medium mb-6 flex items-center gap-2">
-          <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center gap-4"
+        >
           <Link
             to="/admin/new-album"
-            className="group flex flex-col gap-4 bg-card border border-border/40 rounded-3xl p-8 hover:border-accent/30 hover:bg-accent/5 transition-all duration-300 hover:shadow-xl"
+            className="flex items-center gap-2 bg-emerald-800 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-emerald-900 transition-all shadow-lg shadow-emerald-900/10"
           >
-            <div className="w-14 h-14 bg-accent text-white rounded-2xl flex items-center justify-center shadow-lg shadow-accent/20 group-hover:scale-110 transition-transform duration-500">
-              <PlusCircle size={28} strokeWidth={1.5} />
-            </div>
-            <div>
-              <p className="text-lg font-semibold mb-1">Upload New Album</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Start a new collection of photos and share them with the world.
-              </p>
-            </div>
+            <Plus size={18} /> Add Album
           </Link>
           <Link
             to="/admin/categories"
-            className="group flex flex-col gap-4 bg-card border border-border/40 rounded-3xl p-8 hover:border-accent/30 hover:bg-accent/5 transition-all duration-300 hover:shadow-xl"
+            className="flex items-center gap-2 bg-neutral-100/80 text-foreground px-6 py-3 rounded-2xl font-bold text-sm hover:bg-neutral-200 transition-all"
           >
-            <div className="w-14 h-14 bg-foreground text-background rounded-2xl flex items-center justify-center shadow-lg shadow-foreground/10 group-hover:scale-110 transition-transform duration-500">
-              <Tag size={28} strokeWidth={1.5} />
-            </div>
-            <div>
-              <p className="text-lg font-semibold mb-1">Manage Categories</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Organize your work into curated photography categories.
-              </p>
-            </div>
+            Manage Categories
           </Link>
-          <Link
-            to="/"
-            className="group flex flex-col gap-4 bg-card border border-border/40 rounded-3xl p-8 hover:border-accent/30 hover:bg-accent/5 transition-all duration-300 hover:shadow-xl"
+        </motion.div>
+      </header>
+
+      {/* Stats Grid - Matching the Image */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {stats.map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: i * 0.1 }}
+            className={`relative p-10 rounded-[2.5rem] border shadow-sm flex flex-col justify-between h-64 overflow-hidden group ${
+              stat.highlight 
+              ? "bg-emerald-800 text-white border-emerald-900 shadow-xl shadow-emerald-900/10" 
+              : "bg-white text-foreground border-neutral-100 shadow-sm"
+            }`}
           >
-            <div className="w-14 h-14 bg-muted text-muted-foreground rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-              <Image size={28} strokeWidth={1.5} />
+            <div className="flex items-start justify-between">
+              <span className={`text-sm font-bold opacity-80 ${stat.highlight ? "text-white" : "text-muted-foreground"}`}>
+                {stat.label}
+              </span>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:rotate-12 ${
+                stat.highlight ? "bg-white/10 text-white" : "bg-emerald-800 text-white shadow-lg shadow-emerald-900/20"
+              }`}>
+                <ArrowUpRight size={20} strokeWidth={2.5} />
+              </div>
             </div>
+
             <div>
-              <p className="text-lg font-semibold mb-1">Live Portfolio</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                View your portfolio exactly as your clients see it.
-              </p>
+              <span className="text-6xl font-bold leading-none mb-6 block">
+                {stat.value}
+              </span>
+              <div className="flex items-center gap-2">
+                <ArrowRight size={14} className={stat.highlight ? "text-white" : "text-emerald-800"} />
+                <span className={`text-[11px] font-bold ${stat.highlight ? "text-white/80" : "text-muted-foreground"}`}>
+                  {stat.trend}
+                </span>
+              </div>
             </div>
-          </Link>
-        </div>
-      </motion.div>
+            
+            {/* Subtle patterns for visual depth */}
+            <div className={`absolute -right-8 -bottom-8 w-40 h-40 rounded-full blur-3xl opacity-20 ${stat.highlight ? "bg-emerald-400" : "bg-emerald-200"}`} />
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }

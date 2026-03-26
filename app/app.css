@@ -15,10 +15,15 @@
   --muted-foreground:   0 0% 45%;
   --border:       0 0% 92%;
   --ring:         0 0% 4%;
-  --radius:       0rem;         /* Sharp corners for editorial feel */
+  --radius:       1.5rem;       /* Increased radius for the new "Tasko" look */
   --card:         0 0% 100%;
   --card-foreground:    0 0% 4%;
   --destructive:  0 80% 50%;
+
+  /* Brand Colors (Green Theme from Image) */
+  --brand-green: 153 60% 15%;   /* Deep Forest Green */
+  --brand-green-light: 153 60% 95%;
+  --brand-green-muted: 153 30% 25%;
 }
 
 /* ═══════════════════════════════════════════

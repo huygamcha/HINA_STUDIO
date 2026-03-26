@@ -9,64 +9,10 @@ import {
   ImagePlus,
   Loader2,
 } from "lucide-react";
-import { generatePresignedUploadUrl, buildObjectKey } from "~/utils/s3.server";
+import { generatePresignedUploadUrl, buildObjectKey, uploadImageToR2 } from "~/utils/s3.server";
 import { createAlbum, addPhotosToAlbum, getCategories } from "~/utils/supabase.server";
 
-/** UTILITY: Convert image to WebP (Quality 0.85 by default) */
-async function convertFileToWebP(file: File, quality = 0.85): Promise<{ blob: Blob; filename: string }> {
-  return new Promise((resolve, reject) => {
-    // If it's not an image, just return original (though we only accept image/*)
-    if (!file.type.startsWith("image/")) {
-      return resolve({ blob: file, filename: file.name });
-    }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        
-        // Basic resolution check: if extremely large, maybe downscale a bit for web
-        let width = img.width;
-        let height = img.height;
-        const MAX_DIM = 3200; // Cap at 3200px (4K-ish) for web display
-        if (width > MAX_DIM || height > MAX_DIM) {
-          if (width > height) {
-            height = Math.round((height * MAX_DIM) / width);
-            width = MAX_DIM;
-          } else {
-            width = Math.round((width * MAX_DIM) / height);
-            height = MAX_DIM;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d")!;
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const name = file.name.replace(/\.[^/.]+$/, "");
-              resolve({ blob, filename: `${name}.webp` });
-            } else {
-              reject(new Error("WebP conversion failed (blob null)"));
-            }
-          },
-          "image/webp",
-          quality
-        );
-      };
-      img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
-    };
-    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
-  });
-}
 
 export async function loader() {
   const categories = await getCategories();
@@ -80,11 +26,40 @@ export function meta() {
   ];
 }
 
-// Server action: generate presigned URLs or create album
+// Server action: upload images or create album
 export async function action({ request }: { request: Request }) {
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
 
+  // Server-side upload (ReservationSystem pattern)
+  // Receives raw files, converts to WebP via sharp, uploads to R2
+  if (intent === "upload-images") {
+    try {
+      const albumId = formData.get("albumId") as string;
+      const files = formData.getAll("images") as File[];
+
+      if (!files || files.length === 0) {
+        return { intent: "error", error: "No files provided" };
+      }
+
+      const folder = `albums/${albumId}`;
+      const urls: string[] = [];
+
+      for (const file of files) {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const publicUrl = await uploadImageToR2(buffer, file.name, folder);
+        if (publicUrl) urls.push(publicUrl);
+      }
+
+      return { intent: "upload-urls", urls };
+    } catch (err) {
+      console.error("Server upload error:", err);
+      return { intent: "error", error: err instanceof Error ? err.message : "Failed to upload images" };
+    }
+  }
+
+  // Presigned URL fallback (existing pattern)
   if (intent === "get-upload-urls") {
     try {
       const filesJson = formData.get("files") as string;
@@ -128,6 +103,7 @@ export async function action({ request }: { request: Request }) {
       description: description || undefined,
       categoryId,
       cover_url: photoUrls[0] || undefined,
+      thumbnail_url: photoUrls[0] || undefined,
     });
 
     if (photoUrls.length > 0) {
@@ -193,7 +169,8 @@ export default function NewAlbumPage() {
     });
   };
 
-  // Client-side: request presigned URLs then PUT directly to R2
+  // Server-side upload: send files to server action, server converts to WebP via sharp & uploads to R2
+  // (Pattern from ReservationSystem's CloudflareService)
   const handleUpload = async () => {
     if (files.length === 0) return;
 
@@ -203,77 +180,43 @@ export default function NewAlbumPage() {
 
     try {
       const updatedFiles = [...files];
-      const preparedFiles: { blob: Blob; filename: string }[] = [];
 
-      // 1. Convert ALL files to WebP locally first
+      // Mark all as uploading
       for (let i = 0; i < updatedFiles.length; i++) {
         updatedFiles[i].status = "uploading";
-        updatedFiles[i].progress = 10; // "Preparing"
-        setFiles([...updatedFiles]);
+        updatedFiles[i].progress = 30;
+      }
+      setFiles([...updatedFiles]);
 
-        try {
-          const { blob, filename } = await convertFileToWebP(updatedFiles[i].file);
-          preparedFiles.push({ blob, filename });
-        } catch (err) {
-          console.error("Conversion error:", err);
-          updatedFiles[i].status = "error";
-          // Try to fallback to original if conversion fails
-          preparedFiles.push({ blob: updatedFiles[i].file, filename: updatedFiles[i].file.name });
-        }
+      // Send all files to server for processing (sharp WebP conversion + R2 upload)
+      const formData = new FormData();
+      formData.set("intent", "upload-images");
+      formData.set("albumId", albumId);
+      for (const fp of updatedFiles) {
+        formData.append("images", fp.file);
       }
 
-      // 2. Get presigned URLs from server for the .webp files
-      const formData = new FormData();
-      formData.set("intent", "get-upload-urls");
-      formData.set("albumId", albumId);
-      formData.set(
-        "files",
-        JSON.stringify(preparedFiles.map((f) => ({ 
-          name: f.filename, 
-          type: "image/webp" 
-        })))
-      );
-
-      const res = await fetch("/admin/new-album", { 
-        method: "POST", 
+      const res = await fetch("/admin/new-album", {
+        method: "POST",
         body: formData,
-        headers: { "Accept": "application/json" }
+        headers: { "Accept": "application/json" },
       });
       const data = await res.json();
 
       if (data.intent === "error") throw new Error(data.error);
-      if (!data.urls) throw new Error("Failed to get upload URLs");
+      if (!data.urls || data.urls.length === 0) throw new Error("No images were uploaded");
 
-      // 3. Upload each converted blob directly to R2
-      const publicUrls: string[] = [];
-
+      // Update file statuses with returned URLs
       for (let i = 0; i < updatedFiles.length; i++) {
-        if (updatedFiles[i].status === "error") continue;
-        
-        updatedFiles[i].status = "uploading";
-        updatedFiles[i].progress = 50;
-        setFiles([...updatedFiles]);
-
-        try {
-          const { blob, filename } = preparedFiles[i];
-          await fetch(data.urls[i].uploadUrl, {
-            method: "PUT",
-            body: blob,
-            headers: { "Content-Type": "image/webp" },
-          });
-
+        if (data.urls[i]) {
           updatedFiles[i].status = "done";
           updatedFiles[i].progress = 100;
-          updatedFiles[i].publicUrl = data.urls[i].publicUrl;
-          publicUrls.push(data.urls[i].publicUrl);
-        } catch (err) {
-          console.error("Upload error:", err);
+          updatedFiles[i].publicUrl = data.urls[i];
+        } else {
           updatedFiles[i].status = "error";
         }
-
-        setFiles([...updatedFiles]);
       }
-
+      setFiles([...updatedFiles]);
       setUploadComplete(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -293,7 +236,7 @@ export default function NewAlbumPage() {
   const uploadedUrls = files.filter((f) => f.publicUrl).map((f) => f.publicUrl!);
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="max-w-8xl mx-auto p-4 md:p-8 animate-in fade-in duration-700">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -301,7 +244,7 @@ export default function NewAlbumPage() {
         className="mb-8"
       >
         <h1 className="text-3xl font-medium mb-2">New Album</h1>
-        <p className="text-muted-foreground font-medium">
+        <p className=" font-medium">
           Create a new album and upload your photos.
         </p>
       </motion.div>
@@ -312,8 +255,8 @@ export default function NewAlbumPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-3"
         >
-          <AlertCircle size={18} className="text-destructive shrink-0" />
-          <p className="text-destructive text-sm font-medium">
+          <AlertCircle size={18} className=" shrink-0" />
+          <p className=" text-sm font-medium">
             {error || (actionData as any)?.error}
           </p>
         </motion.div>
@@ -343,7 +286,7 @@ export default function NewAlbumPage() {
           <h2 className="text-lg font-medium">Album Details</h2>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-muted-foreground">
+            <label className="block text-sm font-medium ">
               Title *
             </label>
             <input
@@ -358,24 +301,24 @@ export default function NewAlbumPage() {
                 );
               }}
               placeholder="e.g. Golden Hour Wedding"
-              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
+              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-muted-foreground">
+            <label className="block text-sm font-medium ">
               Slug * (URL friendly)
             </label>
             <input
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               placeholder="e.g. golden-hour-wedding"
-              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
+              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-muted-foreground">
+            <label className="block text-sm font-medium ">
               Description
             </label>
             <textarea
@@ -383,12 +326,12 @@ export default function NewAlbumPage() {
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="A brief description of this album..."
-              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all resize-none"
+              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all resize-none"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-muted-foreground">
+            <label className="block text-sm font-medium ">
               Category *
             </label>
             <div className="flex flex-wrap gap-2">
@@ -399,7 +342,7 @@ export default function NewAlbumPage() {
                   onClick={() => setCategoryId(cat.id)}
                   className={`px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer ${categoryId === cat.id
                     ? "bg-accent text-white"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
+                    : "bg-muted  hover:"
                     }`}
                 >
                   {cat.name}
@@ -426,12 +369,12 @@ export default function NewAlbumPage() {
             <ImagePlus
               size={40}
               strokeWidth={1}
-              className="mx-auto text-muted-foreground group-hover:text-accent transition-colors mb-4"
+              className="mx-auto  group-hover: transition-colors mb-4"
             />
-            <p className="text-sm text-muted-foreground font-medium">
+            <p className="text-sm  font-medium">
               Click to select photos
             </p>
-            <p className="text-xs text-muted-foreground/60 font-medium mt-1">
+            <p className="text-xs /60 font-medium mt-1">
               JPG, PNG, WebP • Max 20MB per file
             </p>
             <input
