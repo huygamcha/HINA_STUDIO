@@ -1,8 +1,28 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Form, useLoaderData, useActionData, useNavigation } from "react-router";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Edit2, X, Check, Loader2, AlertCircle, Tag } from "lucide-react";
-import { getCategories, createCategory, updateCategory, deleteCategory } from "~/utils/supabase.server";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  X,
+  Check,
+  Loader2,
+  AlertCircle,
+  Tag,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from "~/utils/supabase.server";
+import { createSlug } from "~/utils/slug";
+
+const PAGE_SIZE = 10;
 
 export async function loader() {
   const categories = await getCategories();
@@ -40,7 +60,7 @@ export async function action({ request }: { request: Request }) {
     if (intent === "delete") {
       return { error: "Cannot delete category that has albums associated with it." };
     }
-    if (e.code === 'P2002') {
+    if (e.code === "P2002") {
       return { error: "A category with this name or slug already exists." };
     }
     return { error: "An unexpected error occurred. Please try again." };
@@ -49,6 +69,85 @@ export async function action({ request }: { request: Request }) {
   return null;
 }
 
+/* ═══════════════════════════════════════════
+   CONFIRM DIALOG
+   ═══════════════════════════════════════════ */
+function ConfirmDialog({
+  isOpen,
+  title,
+  message,
+  confirmLabel = "Delete",
+  isLoading = false,
+  onConfirm,
+  onCancel,
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  isLoading?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={!isLoading ? onCancel : undefined}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            className="relative bg-white rounded-2xl shadow-2xl border border-border/30 max-w-sm w-full p-6 space-y-4"
+          >
+            <div className="w-12 h-12 bg-destructive/10 rounded-xl flex items-center justify-center mx-auto">
+              <AlertCircle size={24} className="text-destructive" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-semibold">{title}</h3>
+              <p className="text-sm  leading-relaxed">{message}</p>
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={isLoading}
+                className="px-6 py-2 border border-border/50 rounded-xl text-sm font-medium transition-all hover:bg-muted disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onConfirm}
+                disabled={isLoading}
+                className="px-6 py-2 bg-destructive text-white rounded-xl text-sm font-medium transition-all hover:bg-destructive/90 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {confirmLabel}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   PAGE
+   ═══════════════════════════════════════════ */
 export default function CategoriesPage() {
   const { categories } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -57,6 +156,16 @@ export default function CategoriesPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  // Confirm dialog
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    catId: string;
+    catName: string;
+  }>({ isOpen: false, catId: "", catName: "" });
+  const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
 
   // Form states
   const [name, setName] = useState("");
@@ -81,97 +190,132 @@ export default function CategoriesPage() {
 
   const autoSlug = (val: string) => {
     setName(val);
-    setSlug(val.toLowerCase()
-      .replace(/ /g, "-")
-      .replace(/[^\w-]+/g, "")
-    );
+    setSlug(createSlug(val));
   };
 
+  // Filtered + paginated
+  const filtered = useMemo(() => {
+    if (!search.trim()) return categories;
+    const q = search.toLowerCase();
+    return categories.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q)
+    );
+  }, [categories, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset to page 1 when search changes
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    setPage(1);
+  };
+
+  // Delete via form submission
+  const handleDeleteConfirm = () => {
+    setIsDeleteSubmitting(true);
+    const form = document.getElementById(`delete-form-${confirmDialog.catId}`) as HTMLFormElement;
+    if (form) form.requestSubmit();
+  };
+
+  // Close dialog on success or error return, OR when navigation finishes
+  useEffect(() => {
+    if (actionData) {
+      setConfirmDialog({ isOpen: false, catId: "", catName: "" });
+      setIsDeleteSubmitting(false);
+    }
+  }, [actionData]);
+
+  useEffect(() => {
+    if (navigation.state === "idle" && !isSubmitting) {
+      setConfirmDialog({ isOpen: false, catId: "", catName: "" });
+      setIsDeleteSubmitting(false);
+    }
+  }, [navigation.state, isSubmitting]);
+
   return (
-    <div className="max-w-8xl mx-auto p-4 md:p-8 animate-in fade-in duration-700">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-        <div className="space-y-1">
-          <h1 className="text-4xl font-light   flex items-center gap-3">
-            Portfolio <span className="font-semibold ">Categories</span>
-          </h1>
-          <p className=" font-light text-base max-w-md leading-relaxed">
-            Organize your albums and photos into distinct gallery sections.
+    <div className="max-w-8xl mx-auto p-4 md:p-6">
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title="Delete Category"
+        message={`Are you sure you want to delete "${confirmDialog.catName}"? This cannot be undone and will fail if it contains albums.`}
+        confirmLabel="Delete"
+        isLoading={isDeleteSubmitting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => {
+          setConfirmDialog({ isOpen: false, catId: "", catName: "" });
+          setIsDeleteSubmitting(false);
+        }}
+      />
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-xl font-semibold">Categories</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage your album categories · {categories.length} total
           </p>
         </div>
-
         <button
-          onClick={() => { resetForm(); setIsAdding(true); }}
+          onClick={() => {
+            resetForm();
+            setIsAdding(true);
+          }}
           disabled={isAdding}
-          className="group relative flex items-center gap-2 px-6 py-3 bg-foreground text-background rounded-full text-sm font-medium transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-50 overflow-hidden shadow-xl shadow-foreground/10"
+          className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm font-medium transition-all hover:opacity-90 disabled:opacity-50"
         >
-          <div className="absolute inset-0 bg-accent translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none opacity-20" />
-          <Plus size={18} className="transition-transform group-hover:rotate-90 duration-300" />
-          <span>Create New Category</span>
+          <Plus size={16} />
+          New Category
         </button>
       </div>
 
+      {/* Error */}
       {actionData?.error && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="mb-8 p-4 bg-destructive/5 border border-destructive/20 rounded-2xl flex items-start gap-3  text-sm"
-        >
-          <AlertCircle size={18} className="mt-0.5 shrink-0" />
-          <div>
-            <p className="font-semibold mb-0.5">Operation failed</p>
-            <p className="opacity-90">{actionData.error}</p>
-          </div>
-        </motion.div>
+        <div className="mb-4 px-4 py-3 bg-destructive/5 border border-destructive/20 rounded-lg flex items-center gap-2 text-sm text-destructive">
+          <AlertCircle size={16} className="shrink-0" />
+          {actionData.error}
+        </div>
       )}
 
-      {/* Categories Grid/Table Area */}
-      <div className="space-y-6">
-        <AnimatePresence mode="wait">
-          {isAdding && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-accent/5 border border-accent/20 rounded-2xl p-6 shadow-sm ring-1 ring-accent/5"
-            >
-              <div className="flex flex-col md:flex-row gap-6 mb-6">
-                <div className="flex-1 space-y-2">
-                  <label className="text-xs font-semibold uppercase   ml-1">Name</label>
-                  <input
-                    autoFocus
-                    value={name}
-                    onChange={(e) => autoSlug(e.target.value)}
-                    placeholder="e.g. Portrait Photography"
-                    className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all placeholder:/50"
-                  />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <label className="text-xs font-semibold uppercase   ml-1">Url Slug</label>
-                  <div className="relative">
-                    <Tag size={14} className="absolute left-4 top-1/2 -translate-y-1/2 " />
-                    <input
-                      value={slug}
-                      onChange={(e) => setSlug(e.target.value)}
-                      placeholder="portrait-photography"
-                      className="w-full bg-background border border-border/50 rounded-xl pl-10 pr-4 py-3 text-sm  focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
-                    />
-                  </div>
-                </div>
-                <div className="w-full md:w-32 space-y-2">
-                  <label className="text-xs font-semibold uppercase   ml-1 text-center block">Sort Index</label>
-                  <input
-                    type="number"
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value)}
-                    className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm text-center focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
-                  />
-                </div>
+      {/* Add form */}
+      <AnimatePresence>
+        {isAdding && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden mb-4"
+          >
+            <div className="border border-border/50 rounded-lg p-4 bg-muted/30 space-y-4">
+              <p className="text-sm font-medium">New Category</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => autoSlug(e.target.value)}
+                  placeholder="Name"
+                  className="flex-1 bg-white border border-border/50 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring/20 focus:border-ring outline-none transition-all"
+                />
+                <input
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder="Slug"
+                  className="flex-1 bg-white border border-border/50 rounded-lg px-3 py-2 text-sm  focus:ring-2 focus:ring-ring/20 focus:border-ring outline-none transition-all"
+                />
+                <input
+                  type="number"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  placeholder="Order"
+                  className="w-20 bg-white border border-border/50 rounded-lg px-3 py-2 text-sm text-center focus:ring-2 focus:ring-ring/20 focus:border-ring outline-none transition-all"
+                />
               </div>
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-2">
                 <button
                   onClick={resetForm}
-                  className="px-5 py-2.5 text-sm font-medium  hover:bg-muted rounded-xl transition-colors"
+                  className="px-3 py-1.5 text-sm font-medium  hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -183,150 +327,193 @@ export default function CategoriesPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting || !name || !slug}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-accent text-white rounded-xl text-sm font-medium hover:bg-accent/90 transition-all shadow-lg shadow-accent/20 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-foreground text-background rounded-lg text-sm font-medium transition-all hover:opacity-90 disabled:opacity-50"
                   >
-                    {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
-                    Create Category
+                    {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    Create
                   </button>
                 </Form>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="grid gap-4">
-          {categories.length === 0 && !isAdding && (
-            <div className="py-24 text-center border-2 border-dashed border-border/50 rounded-3xl space-y-4">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto /50">
-                <Tag size={32} />
-              </div>
-              <div className="space-y-1">
-                <p className="text-lg font-medium ">No categories yet</p>
-                <p className="text-sm ">Start by creating your first organizational category.</p>
-              </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Search bar */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 " />
+          <input
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search categories..."
+            className="w-full bg-white border border-border/50 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-ring/20 focus:border-ring outline-none transition-all"
+          />
+          {search && (
+            <button
+              onClick={() => handleSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5  hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
           )}
-
-          <AnimatePresence>
-            {categories.map((cat, index) => (
-              <motion.div
-                layout
-                key={cat.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className={`group bg-card border border-border/40 rounded-2xl transition-all duration-300 hover:shadow-2xl hover:shadow-foreground/5 hover:border-border/80 ${editingId === cat.id ? 'ring-2 ring-accent border-transparent' : ''}`}
-              >
-                {editingId === cat.id ? (
-                  <div className="p-6">
-                    <div className="flex flex-col md:flex-row gap-6 mb-6">
-                      <div className="flex-1 space-y-2">
-                        <label className="text-xs font-semibold uppercase   ml-1">Name</label>
-                        <input
-                          autoFocus
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
-                        />
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <label className="text-xs font-semibold uppercase   ml-1 text-center block">Url Slug</label>
-                        <input
-                          value={slug}
-                          onChange={(e) => setSlug(e.target.value)}
-                          className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm  focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
-                        />
-                      </div>
-                      <div className="w-full md:w-32 space-y-2">
-                        <label className="text-xs font-semibold uppercase   ml-1 text-center block">Sort Index</label>
-                        <input
-                          type="number"
-                          value={sortOrder}
-                          onChange={(e) => setSortOrder(e.target.value)}
-                          className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm text-center focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none transition-all"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-3 border-t border-border/50 pt-6">
-                      <button
-                        onClick={resetForm}
-                        className="px-5 py-2.5 text-sm font-medium  hover:bg-muted rounded-xl transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <Form method="post" className="inline">
-                        <input type="hidden" name="intent" value="update" />
-                        <input type="hidden" name="id" value={cat.id} />
-                        <input type="hidden" name="name" value={name} />
-                        <input type="hidden" name="slug" value={slug} />
-                        <input type="hidden" name="sortOrder" value={sortOrder} />
-                        <button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="flex items-center gap-2 px-6 py-2.5 bg-accent text-white rounded-xl text-sm font-medium hover:bg-accent/90 transition-all shadow-lg shadow-accent/20"
-                        >
-                          {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
-                          Save Changes
-                        </button>
-                      </Form>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 md:p-6">
-                    <div className="flex items-center gap-6">
-                      <div className="w-12 h-12 bg-accent/5 rounded-2xl flex items-center justify-center  ring-1 ring-accent/10">
-                        <Tag size={20} strokeWidth={1.5} />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-medium  ">{cat.name}</h3>
-                          <span className="hidden sm:inline-flex px-2 py-0.5 bg-muted  text-[10px] font-bold uppercase  rounded-full ring-1 ring-border/50">
-                            {cat.slug}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs font-light  uppercase ">
-                          <span className="flex items-center gap-1.5 bg-foreground/5 px-2 py-0.5 rounded-full ring-1 ring-foreground/5">
-                            Index: <span className="font-bold ">{cat.sort_order}</span>
-                          </span>
-                          <span className="flex items-center gap-1.5 bg-foreground/5 px-2 py-0.5 rounded-full ring-1 ring-foreground/5">
-                            Albums: <span className="font-bold ">{cat._count?.albums ?? 0}</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 mt-6 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-border/50">
-                      <button
-                        onClick={() => startEdit(cat)}
-                        className="p-3  hover: hover:bg-accent/5 rounded-2xl transition-all group/btn"
-                        title="Edit Category"
-                      >
-                        <Edit2 size={20} strokeWidth={1.5} className="group-hover/btn:scale-110 transition-transform" />
-                      </button>
-                      <Form
-                        method="post"
-                        onSubmit={(e) => !confirm(`Delete "${cat.name}"? This action cannot be undone and will fail if the category contains albums.`) && e.preventDefault()}
-                        className="inline"
-                      >
-                        <input type="hidden" name="intent" value="delete" />
-                        <input type="hidden" name="id" value={cat.id} />
-                        <button
-                          type="submit"
-                          disabled={cat._count?.albums > 0}
-                          className="p-3  hover: hover:bg-destructive/5 rounded-2xl transition-all group/btn disabled:opacity-30 disabled:hover:bg-transparent"
-                          title={cat._count?.albums > 0 ? "Cannot delete category with albums" : "Delete Category"}
-                        >
-                          <Trash2 size={20} strokeWidth={1.5} className="group-hover/btn:scale-110 transition-transform" />
-                        </button>
-                      </Form>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
         </div>
+        <span className="text-xs ">
+          Showing {paged.length} of {filtered.length}
+        </span>
       </div>
+
+      {/* Table */}
+      <div className="border border-border/50 rounded-lg overflow-hidden bg-white">
+        {/* Table header */}
+        <div className="grid grid-cols-[1fr_1fr_80px_80px_100px] gap-4 px-4 py-2.5 bg-muted/40 border-b border-border/40 text-xs font-semibold  uppercase ">
+          <span>Name</span>
+          <span>Slug</span>
+          <span className="text-center">Order</span>
+          <span className="text-center">Albums</span>
+          <span className="text-right">Actions</span>
+        </div>
+
+        {/* Empty state */}
+        {paged.length === 0 && (
+          <div className="py-16 text-center">
+            <Tag size={28} className="mx-auto /40 mb-2" />
+            <p className="text-sm ">
+              {search ? "No categories match your search." : "No categories yet."}
+            </p>
+          </div>
+        )}
+
+        {/* Rows */}
+        {paged.map((cat) => (
+          <div key={cat.id}>
+            {editingId === cat.id ? (
+              /* ── Edit row ── */
+              <div className="grid grid-cols-[1fr_1fr_80px_80px_100px] gap-4 px-4 py-2.5 border-b border-border/30 bg-blue-50/30 items-center">
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="bg-white border border-border/50 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-ring/20 focus:border-ring outline-none transition-all"
+                />
+                <input
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  className="bg-white border border-border/50 rounded-lg px-3 py-1.5 text-sm  focus:ring-2 focus:ring-ring/20 focus:border-ring outline-none transition-all"
+                />
+                <input
+                  type="number"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  className="bg-white border border-border/50 rounded-lg px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-ring/20 focus:border-ring outline-none transition-all"
+                />
+                <div />
+                <div className="flex items-center justify-end gap-1">
+                  <Form method="post" className="inline">
+                    <input type="hidden" name="intent" value="update" />
+                    <input type="hidden" name="id" value={cat.id} />
+                    <input type="hidden" name="name" value={name} />
+                    <input type="hidden" name="slug" value={slug} />
+                    <input type="hidden" name="sortOrder" value={sortOrder} />
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Save"
+                    >
+                      {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                    </button>
+                  </Form>
+                  <button
+                    onClick={resetForm}
+                    className="p-1.5  hover:bg-muted rounded-lg transition-colors"
+                    title="Cancel"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* ── Display row ── */
+              <div className="grid grid-cols-[1fr_1fr_80px_80px_100px] gap-4 px-4 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors items-center group">
+                <span className="text-sm font-medium truncate">{cat.name}</span>
+                <span className="text-sm  truncate">{cat.slug}</span>
+                <span className="text-sm  text-center">{cat.sort_order}</span>
+                <span className="text-sm  text-center">
+                  {cat._count?.albums ?? 0}
+                </span>
+                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => startEdit(cat)}
+                    className="p-1.5  hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                    title="Edit"
+                  >
+                    <Edit2 size={15} />
+                  </button>
+
+                  {/* Hidden delete form */}
+                  <Form method="post" id={`delete-form-${cat.id}`} className="hidden">
+                    <input type="hidden" name="intent" value="delete" />
+                    <input type="hidden" name="id" value={cat.id} />
+                  </Form>
+
+                  <button
+                    onClick={() =>
+                      setConfirmDialog({ isOpen: true, catId: cat.id, catName: cat.name })
+                    }
+                    disabled={(cat._count?.albums ?? 0) > 0}
+                    className="p-1.5  hover:text-destructive hover:bg-destructive/5 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:"
+                    title={
+                      (cat._count?.albums ?? 0) > 0
+                        ? "Cannot delete: has albums"
+                        : "Delete"
+                    }
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 px-1">
+          <span className="text-xs ">
+            Page {currentPage} of {totalPages}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="p-1.5  hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-30"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setPage(n)}
+                className={`w-8 h-8 text-xs font-medium rounded-lg transition-colors ${n === currentPage
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="p-1.5  hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-30"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

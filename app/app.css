@@ -45,6 +45,7 @@
   --color-ring: hsl(var(--ring));
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
+  --color-destructive: hsl(var(--destructive));
 
   --animate-fade-in: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-fade-up: fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -82,6 +83,17 @@ body {
   font-weight: 300;
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
+}
+
+button,
+[role="button"],
+a,
+select,
+label[for],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"] {
+  cursor: pointer;
 }
 
 ::selection {

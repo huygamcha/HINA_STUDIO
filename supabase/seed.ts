@@ -39,6 +39,7 @@ const ALBUMS = [
     category_slug: "beauty",
     cover_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80",
     thumbnail_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80",
+    sort_order: 1,
   },
   {
     slug: "urban-rhythms",
@@ -47,6 +48,7 @@ const ALBUMS = [
     category_slug: "beauty",
     cover_url: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=1200&q=80",
     thumbnail_url: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=600&q=80",
+    sort_order: 2,
   },
   {
     slug: "minimalist-muse",
@@ -55,6 +57,7 @@ const ALBUMS = [
     category_slug: "beauty",
     cover_url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1200&q=80",
     thumbnail_url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80",
+    sort_order: 3,
   },
   {
     slug: "golden-hour-weddings",
@@ -63,6 +66,7 @@ const ALBUMS = [
     category_slug: "sinh-nhat",
     cover_url: "https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&q=80",
     thumbnail_url: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80",
+    sort_order: 4,
   },
 ];
 
@@ -106,8 +110,8 @@ async function seed() {
       const categoryId = categoryMap[albumData.category_slug];
 
       const [album] = await sql`
-        INSERT INTO albums (slug, title, description, category_id, cover_url, thumbnail_url)
-        VALUES (${albumData.slug}, ${albumData.title}, ${albumData.description}, ${categoryId}, ${albumData.cover_url}, ${albumData.thumbnail_url})
+        INSERT INTO albums (slug, title, description, category_id, cover_url, thumbnail_url, sort_order)
+        VALUES (${albumData.slug}, ${albumData.title}, ${albumData.description}, ${categoryId}, ${albumData.cover_url}, ${albumData.thumbnail_url}, ${albumData.sort_order})
         RETURNING id, title
       `;
 

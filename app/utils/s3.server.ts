@@ -33,6 +33,8 @@ function getS3Client() {
   return new S3Client({
     region: "auto",
     endpoint,
+    // For R2, path-style (true) is often more reliable than virtual-hosted style
+    // especially when using account-specific endpoints. 
     forcePathStyle: true,
     credentials: {
       accessKeyId,

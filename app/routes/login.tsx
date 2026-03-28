@@ -12,8 +12,8 @@ import {
    ═══════════════════════════════════════════ */
 export function meta() {
   return [
-    { title: "Login — Tiệm ảnh Hina Studio" },
-    { name: "description", content: "Admin login for Tiệm ảnh Hina Studio." },
+    { title: "Login — Tiệm ảnh Hina" },
+    { name: "description", content: "Admin login for Tiệm ảnh Hina." },
   ];
 }
 
@@ -35,7 +35,7 @@ export async function action({ request }: { request: Request }) {
     return { error: "Invalid email or password." };
   }
 
-  return createUserSession("/admin");
+  return createUserSession("/admin/albums");
 }
 
 /* ═══════════════════════════════════════════
@@ -150,7 +150,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-primary text-primary-foreground text-sm font-medium uppercase hover:bg-accent transition-all duration-300 rounded-md cursor-pointer"
+              className="w-fit mx-auto block px-12 py-3 bg-primary text-primary-foreground text-sm font-medium uppercase hover:bg-accent transition-all duration-300 rounded-md cursor-pointer"
             >
               Sign In
             </button>

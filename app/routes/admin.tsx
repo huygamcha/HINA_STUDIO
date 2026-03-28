@@ -1,11 +1,5 @@
-import { Outlet, Link, useLocation } from "react-router";
-import {
-  Camera,
-  LayoutDashboard,
-  FolderOpen,
-  LogOut,
-  Tag,
-} from "lucide-react";
+import { Outlet, Link, useLocation, redirect } from "react-router";
+import { Camera, FolderOpen, LogOut, Tag } from "lucide-react";
 import { requireAuth, logout } from "~/utils/session.server";
 
 /* ═══════════════════════════════════════════
@@ -13,6 +7,14 @@ import { requireAuth, logout } from "~/utils/session.server";
    ═══════════════════════════════════════════ */
 export async function loader({ request }: { request: Request }) {
   await requireAuth(request);
+
+  const url = new URL(request.url);
+  const pathname = url.pathname.replace(/\/$/, "");
+
+  if (pathname === "/admin") {
+    return redirect("/admin/albums");
+  }
+
   return null;
 }
 
@@ -30,58 +32,70 @@ export default function AdminLayout() {
   const location = useLocation();
 
   const navItems = [
-    { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/admin/albums", label: "Albums", icon: FolderOpen },
-    { to: "/admin/categories", label: "Categories", icon: Tag },
+    {
+      to: "/admin/albums",
+      label: "Albums",
+      icon: FolderOpen,
+      activePaths: ["/admin/albums", "/admin/new-album", "/admin/edit-album"],
+    },
+    {
+      to: "/admin/categories",
+      label: "Categories",
+      icon: Tag,
+      activePaths: ["/admin/categories"],
+    },
   ];
 
   return (
-    <div className="min-h-screen flex bg-emerald-50/20">
-      {/* Sidebar - Inspired by Tasko UI */}
-      <aside className="w-72 bg-white border-r border-emerald-100/50 flex flex-col shrink-0">
-        <div className="p-8 border-b border-border/20">
+    <div className="min-h-screen flex">
+      {/* Sidebar */}
+      <aside className="w-56 bg-white border-r border-border/40 flex flex-col shrink-0">
+        {/* Logo */}
+        <div className="px-5 py-6 border-b border-border/30">
           <Link
             to="/"
-            className="flex items-center gap-3 transition-opacity hover:opacity-80"
+            className="flex items-center gap-2.5 transition-opacity hover:opacity-70"
           >
-            <div className="w-10 h-10 bg-emerald-700 text-white flex items-center justify-center rounded-2xl shadow-lg shadow-emerald-700/20">
-              <Camera size={22} strokeWidth={2} />
+            <div className="w-8 h-8 bg-foreground text-background flex items-center justify-center rounded-lg shrink-0">
+              <Camera size={16} strokeWidth={2} />
             </div>
-            <span className="text-xl font-bold">
-              Hina <span className="font-medium text-emerald-800/80 italic">Studio</span>
+            <span className="text-sm font-semibold ">
+              Tiệm ảnh Hina
             </span>
           </Link>
-          <p className="text-[10px] uppercase font-black opacity-20 mt-4 ml-1">
-            Administration
-          </p>
         </div>
 
-        <nav className="flex-1 p-6 space-y-2">
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.to || (item.to !== "/admin" && location.pathname.startsWith(item.to));
+            const isActive = item.activePaths.some((path) =>
+              location.pathname.startsWith(path)
+            );
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex items-center gap-4 px-6 py-4 rounded-[1.2rem] text-sm font-semibold transition-all duration-300 ${isActive
-                  ? "bg-emerald-800 text-white shadow-xl shadow-emerald-900/10"
-                  : "text-muted-foreground hover:bg-emerald-50/50 hover:text-emerald-900"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors
+                  ${isActive
+                    ? "text-background bg-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   }`}
               >
-                <item.icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <item.icon size={18} strokeWidth={isActive ? 2 : 1.5} className="shrink-0" />
                 {item.label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-6 border-t border-border/20 bg-neutral-50/30">
+        {/* Sign Out */}
+        <div className="px-3 py-4 border-t border-border/30">
           <form method="post">
             <button
               type="submit"
-              className="flex items-center gap-4 w-full px-6 py-4 rounded-[1.2rem] text-sm font-semibold text-muted-foreground hover:bg-destructive/5 hover:text-destructive transition-all duration-300"
+              className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-[13px] font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
             >
-              <LogOut size={20} strokeWidth={1.5} />
+              <LogOut size={18} strokeWidth={1.5} className="shrink-0" />
               Sign Out
             </button>
           </form>
@@ -89,9 +103,8 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-emerald-50/20 p-4 md:p-8">
-        {/* We add an inner wrapper for the page content */}
-        <div className="min-h-full bg-white rounded-[2rem] shadow-sm border border-emerald-100/30">
+      <main className="flex-1 overflow-y-auto bg-neutral-50/50 p-4 md:p-6">
+        <div className="min-h-full bg-white rounded-2xl shadow-sm border border-border/30">
           <Outlet />
         </div>
       </main>

@@ -27,6 +27,7 @@ model Album {
   categoryId  String   @map("category_id") @db.Uuid
   coverUrl    String?  @map("cover_url")
   thumbnailUrl String? @map("thumbnail_url")
+  sortOrder   Int      @default(0) @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   category    Category @relation(fields: [categoryId], references: [id])
   photos      Photo[]

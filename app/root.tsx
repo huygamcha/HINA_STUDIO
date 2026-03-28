@@ -31,9 +31,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta
           name="description"
-          content="Tiệm ảnh Hina Studio — Minimalist photography portfolio showcasing cinematic wedding, street, and lookbook photography."
+          content="Tiệm ảnh Hina — Minimalist photography portfolio showcasing cinematic wedding, street, and lookbook photography."
         />
-        <title>Tiệm ảnh Hina Studio — Photography Portfolio</title>
+        <title>Tiệm ảnh Hina — Photography Portfolio</title>
         <Meta />
         <Links />
       </head>

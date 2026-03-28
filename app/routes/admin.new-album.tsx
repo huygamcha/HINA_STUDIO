@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Form, useActionData, useNavigation, useLoaderData } from "react-router";
+import { Form, useActionData, useNavigation, useLoaderData, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -8,9 +8,11 @@ import {
   AlertCircle,
   ImagePlus,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { generatePresignedUploadUrl, buildObjectKey, uploadImageToR2 } from "~/utils/s3.server";
 import { createAlbum, addPhotosToAlbum, getCategories } from "~/utils/supabase.server";
+import { createSlug } from "~/utils/slug";
 
 
 
@@ -21,7 +23,7 @@ export async function loader() {
 
 export function meta() {
   return [
-    { title: "New Album — Tiệm ảnh Hina Studio Admin" },
+    { title: "New Album — Tiệm ảnh Hina Admin" },
     { name: "description", content: "Create a new photo album." },
   ];
 }
@@ -52,10 +54,10 @@ export async function action({ request }: { request: Request }) {
         if (publicUrl) urls.push(publicUrl);
       }
 
-      return { intent: "upload-urls", urls };
+      return Response.json({ intent: "upload-urls", urls });
     } catch (err) {
       console.error("Server upload error:", err);
-      return { intent: "error", error: err instanceof Error ? err.message : "Failed to upload images" };
+      return Response.json({ intent: "error", error: err instanceof Error ? err.message : "Failed to upload images" }, { status: 500 });
     }
   }
 
@@ -89,6 +91,8 @@ export async function action({ request }: { request: Request }) {
     const slug = formData.get("slug") as string;
     const description = formData.get("description") as string;
     const categoryId = formData.get("categoryId") as string;
+    const sortOrder = parseInt(formData.get("sortOrder") as string) || 0;
+    const thumbnailUrl = formData.get("thumbnailUrl") as string;
     const photosJson = formData.get("photos") as string;
 
     if (!title || !categoryId) {
@@ -102,8 +106,9 @@ export async function action({ request }: { request: Request }) {
       slug,
       description: description || undefined,
       categoryId,
-      cover_url: photoUrls[0] || undefined,
-      thumbnail_url: photoUrls[0] || undefined,
+      sort_order: sortOrder,
+      cover_url: thumbnailUrl || photoUrls[0] || undefined,
+      thumbnail_url: thumbnailUrl || photoUrls[0] || undefined,
     });
 
     if (photoUrls.length > 0) {
@@ -141,8 +146,11 @@ export default function NewAlbumPage() {
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [sortOrder, setSortOrder] = useState("0");
   const [files, setFiles] = useState<FilePreview[]>([]);
+  const [thumbnail, setThumbnail] = useState<FilePreview | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const [uploadComplete, setUploadComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -196,10 +204,9 @@ export default function NewAlbumPage() {
         formData.append("images", fp.file);
       }
 
-      const res = await fetch("/admin/new-album", {
+      const res = await fetch("/admin/upload-images", {
         method: "POST",
         body: formData,
-        headers: { "Accept": "application/json" },
       });
       const data = await res.json();
 
@@ -235,19 +242,58 @@ export default function NewAlbumPage() {
 
   const uploadedUrls = files.filter((f) => f.publicUrl).map((f) => f.publicUrl!);
 
+  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setThumbnail({
+      file,
+      preview: URL.createObjectURL(file),
+      status: "pending",
+      progress: 0,
+    });
+  };
+
+  const handleUploadThumbnail = async () => {
+    if (!thumbnail || thumbnail.status === "done") return;
+    setIsUploadingThumbnail(true);
+    try {
+      const formData = new FormData();
+      formData.set("intent", "upload-images");
+      formData.set("albumId", "thumbnails");
+      formData.append("images", thumbnail.file);
+
+      const res = await fetch("/admin/upload-images", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.intent === "error") throw new Error(data.error);
+      if (!data.urls?.[0]) throw new Error("Thumbnail upload failed");
+
+      setThumbnail(prev => prev ? { ...prev, status: "done", publicUrl: data.urls[0] } : null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Thumbnail upload failed");
+    } finally {
+      setIsUploadingThumbnail(false);
+    }
+  };
+  const navigate = useNavigate();
+
   return (
-    <div className="max-w-8xl mx-auto p-4 md:p-8 animate-in fade-in duration-700">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="mb-8"
-      >
-        <h1 className="text-3xl font-medium mb-2">New Album</h1>
-        <p className=" font-medium">
-          Create a new album and upload your photos.
-        </p>
-      </motion.div>
+    <div className="max-w-8xl mx-auto p-4 md:p-6 animate-in fade-in duration-700">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          onClick={() => navigate("/admin/albums")}
+          className="p-1.5 hover:bg-muted rounded-full transition-colors"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <div>
+          <h1 className="text-xl font-semibold">New Album</h1>
+          <p className="text-sm text-muted-foreground">Create a new album and upload your photos.</p>
+        </div>
+      </div>
 
       {(error || (actionData as any)?.error) && (
         <motion.div
@@ -285,36 +331,71 @@ export default function NewAlbumPage() {
         >
           <h2 className="text-lg font-medium">Album Details</h2>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium ">
-              Title *
-            </label>
-            <input
-              value={title}
-              onChange={(e) => {
-                const val = e.target.value;
-                setTitle(val);
-                // Auto-generate slug
-                setSlug(val.toLowerCase()
-                  .replace(/ /g, "-")
-                  .replace(/[^\w-]+/g, "")
-                );
-              }}
-              placeholder="e.g. Golden Hour Wedding"
-              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium ">
+                Title *
+              </label>
+              <input
+                value={title}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTitle(val);
+                  // Auto-generate slug
+                  setSlug(createSlug(val));
+                }}
+                placeholder="e.g. Golden Hour Wedding"
+                className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium ">
+                Slug * (URL friendly)
+              </label>
+              <input
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="e.g. golden-hour-wedding"
+                className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium ">
-              Slug * (URL friendly)
-            </label>
-            <input
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="e.g. golden-hour-wedding"
-              className="w-full px-4 py-3 bg-background border border-border rounded-md text-sm font-medium placeholder:/50 focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium ">
+                Category *
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCategoryId(cat.id)}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer ${categoryId === cat.id
+                      ? "bg-foreground text-background shadow-md"
+                      : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                      }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium ">
+                Display Order
+              </label>
+              <input
+                type="number"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                placeholder="0"
+                className="w-32 px-4 py-2 bg-background border border-border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -330,133 +411,172 @@ export default function NewAlbumPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium ">
-              Category *
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setCategoryId(cat.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer ${categoryId === cat.id
-                    ? "bg-accent text-white"
-                    : "bg-muted  hover:"
-                    }`}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          </div>
+
         </motion.div>
 
-        {/* Photo upload */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="bg-card border border-border/50 rounded-lg p-6 space-y-5"
-        >
-          <h2 className="text-lg font-medium">Photos</h2>
-
-          {/* Drop zone */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-border hover:border-accent/50 rounded-lg p-10 text-center cursor-pointer transition-colors group"
+        <div className="grid grid-cols-4 gap-4">
+          {/* Thumbnail upload */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+            className="bg-card border border-border/50 rounded-lg p-6 space-y-5 col-span-1"
           >
-            <ImagePlus
-              size={40}
-              strokeWidth={1}
-              className="mx-auto  group-hover: transition-colors mb-4"
-            />
-            <p className="text-sm  font-medium">
-              Click to select photos
-            </p>
-            <p className="text-xs /60 font-medium mt-1">
-              JPG, PNG, WebP • Max 20MB per file
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-          </div>
-
-          {/* Preview grid */}
-          <AnimatePresence>
-            {files.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="grid grid-cols-3 sm:grid-cols-4 gap-3"
+            <h2 className="text-lg font-medium">Cover Thumbnail</h2>
+            <div className="flex flex-col gap-4 items-start">
+              <div
+                onClick={() => document.getElementById("thumbnail-input")?.click()}
+                className="w-full md:w-40 aspect-[4/5] md:aspect-square border-2 border-dashed border-border hover:border-accent/50 rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors relative overflow-hidden group bg-neutral-50/50"
               >
-                {files.map((fp, i) => (
-                  <motion.div
-                    key={fp.preview}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="relative aspect-square rounded-md overflow-hidden group"
-                  >
-                    <img
-                      src={fp.preview}
-                      alt={fp.file.name}
-                      className="w-full h-full object-cover"
-                    />
-                    {/* Status overlay */}
-                    {fp.status === "uploading" && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <Loader2 size={20} className="text-white animate-spin" />
-                      </div>
-                    )}
-                    {fp.status === "done" && (
-                      <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
-                        <CheckCircle size={20} className="text-green-400" />
-                      </div>
-                    )}
-                    {fp.status === "error" && (
-                      <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-                        <AlertCircle size={20} className="text-red-400" />
-                      </div>
-                    )}
-                    {/* Remove button */}
-                    {fp.status === "pending" && (
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        className="absolute top-1 right-1 p-1 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      >
-                        <X size={12} className="text-white" />
-                      </button>
-                    )}
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                {thumbnail?.preview ? (
+                  <>
+                    <img src={thumbnail.preview} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <ImagePlus className="text-white" size={24} />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center p-4">
+                    <ImagePlus size={32} strokeWidth={1} className="mx-auto  mb-2" />
+                    <p className="text-xs font-medium">Click to select cover</p>
+                  </div>
+                )}
+                <input
+                  id="thumbnail-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleThumbnailSelect}
+                  className="hidden"
+                />
+              </div>
 
-          {/* Upload button */}
-          {files.length > 0 && !uploadComplete && (
-            <button
-              type="button"
-              onClick={handleUpload}
-              disabled={isUploading}
-              className="flex items-center gap-2 px-6 py-3 bg-accent text-white text-sm font-medium rounded-md hover:bg-accent/90 disabled:opacity-50 transition-all cursor-pointer"
+              <div className="flex-1 space-y-4">
+                {thumbnail && thumbnail.status !== "done" && (
+                  <button
+                    type="button"
+                    onClick={handleUploadThumbnail}
+                    disabled={isUploadingThumbnail}
+                    className="px-6 py-2 bg-emerald-700 text-white text-xs font-bold  rounded-lg hover:bg-emerald-800 disabled:opacity-50 transition-all flex items-center gap-2"
+                  >
+                    {isUploadingThumbnail ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                    {isUploadingThumbnail ? "Uploading..." : "Upload Cover"}
+                  </button>
+                )}
+                {thumbnail?.status === "done" && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-lg text-xs font-bold uppercase">
+                    <CheckCircle size={14} /> Ready to Publish
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Photo upload */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="bg-card border border-border/50 rounded-lg p-6 space-y-5 col-span-3"
+          >
+            <h2 className="text-lg font-medium">Photos</h2>
+
+            {/* Drop zone */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-border hover:border-accent/50 rounded-lg p-10 text-center cursor-pointer transition-colors group"
             >
-              {isUploading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Upload size={16} strokeWidth={1.5} />
+              <ImagePlus
+                size={40}
+                strokeWidth={1}
+                className="mx-auto  group-hover: transition-colors mb-4"
+              />
+              <p className="text-sm  font-medium">
+                Click to select photos
+              </p>
+              <p className="text-xs text-muted-foreground font-medium mt-1">
+                JPG, PNG, WebP • Max 20MB per file
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+
+            {/* Preview grid */}
+            <AnimatePresence>
+              {files.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="grid grid-cols-3 sm:grid-cols-4 gap-3"
+                >
+                  {files.map((fp, i) => (
+                    <motion.div
+                      key={fp.preview}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="relative aspect-square rounded-md overflow-hidden group"
+                    >
+                      <img
+                        src={fp.preview}
+                        alt={fp.file.name}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Status overlay */}
+                      {fp.status === "uploading" && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <Loader2 size={20} className="text-white animate-spin" />
+                        </div>
+                      )}
+                      {fp.status === "done" && (
+                        <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+                          <CheckCircle size={20} className="text-green-400" />
+                        </div>
+                      )}
+                      {fp.status === "error" && (
+                        <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+                          <AlertCircle size={20} className="text-red-400" />
+                        </div>
+                      )}
+                      {/* Remove button */}
+                      {fp.status === "pending" && (
+                        <button
+                          type="button"
+                          onClick={() => removeFile(i)}
+                          className="absolute top-1 right-1 p-1 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        >
+                          <X size={12} className="text-white" />
+                        </button>
+                      )}
+                    </motion.div>
+                  ))}
+                </motion.div>
               )}
-              {isUploading ? "Uploading..." : `Upload ${files.length} Photo${files.length > 1 ? "s" : ""}`}
-            </button>
-          )}
-        </motion.div>
+            </AnimatePresence>
+
+            {/* Upload button */}
+            {files.length > 0 && !uploadComplete && (
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={isUploading}
+                className="flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-xl hover:opacity-80 disabled:opacity-50 transition-all cursor-pointer"
+              >
+                {isUploading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Upload size={16} strokeWidth={1.5} />
+                )}
+                {isUploading ? "Uploading..." : `Upload ${files.length} Photo${files.length > 1 ? "s" : ""}`}
+              </button>
+            )}
+          </motion.div>
+        </div>
 
         {/* Submit form */}
         <Form method="post" onSubmit={handleSubmit}>
@@ -465,12 +585,14 @@ export default function NewAlbumPage() {
           <input type="hidden" name="slug" value={slug} />
           <input type="hidden" name="description" value={description} />
           <input type="hidden" name="categoryId" value={categoryId} />
+          <input type="hidden" name="sortOrder" value={sortOrder} />
+          <input type="hidden" name="thumbnailUrl" value={thumbnail?.publicUrl || ""} />
           <input type="hidden" name="photos" value={JSON.stringify(uploadedUrls)} />
 
           <button
             type="submit"
             disabled={isSubmitting || !title || !slug || !categoryId}
-            className="w-full py-3 bg-primary text-primary-foreground text-sm font-medium uppercase rounded-md hover:bg-accent disabled:opacity-50 transition-all cursor-pointer"
+            className="w-fit ml-auto block px-4 py-2 bg-primary text-primary-foreground text-sm font-medium  rounded-xl hover:opacity-70 disabled:opacity-50 transition-all cursor-pointer"
           >
             {isSubmitting ? "Publishing..." : "Publish Album"}
           </button>

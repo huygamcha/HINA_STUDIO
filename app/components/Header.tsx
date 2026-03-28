@@ -87,7 +87,7 @@ export default function Header({
             </Link>
 
             {/* Right: Info */}
-            <div className="flex items-center gap-6 flex-1 justify-end">
+            <div className="flex items-center gap-4 flex-1 justify-end">
               <Link
                 to="/"
                 className="hidden md:flex items-center gap-1 text-xs font-body font-normal uppercase /40 hover: transition-colors nav-link"

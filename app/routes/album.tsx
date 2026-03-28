@@ -29,7 +29,7 @@ export async function loader({ params }: { params: { slug: string } }) {
    ═══════════════════════════════════════════ */
 export function meta({ data }: { data: any }) {
   return [
-    { title: `${data?.album?.title || "Album"} — Tiệm ảnh Hina Studio` },
+    { title: `${data?.album?.title || "Album"} — Tiệm ảnh Hina` },
     { name: "description", content: "View collection." },
   ];
 }
@@ -169,14 +169,12 @@ export default function AlbumPage() {
               href="https://zalo.me/0703414500"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 hover:opacity-70 transition-opacity"
+              className=""
               aria-label="Zalo"
             >
-              <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M24 0C10.745 0 0 10.745 0 24s10.745 24 24 24 24-10.745 24-24S37.255 0 24 0z" fill="#0068FF" />
-                <path d="M33.6 15.9H14.4c-.83 0-1.5.67-1.5 1.5v13.2c0 .83.67 1.5 1.5 1.5h7.35l3.15 3.15c.29.29.77.29 1.06 0l3.15-3.15h4.5c.83 0 1.5-.67 1.5-1.5V17.4c-.01-.83-.68-1.5-1.5-1.5z" fill="white" />
-                <text x="17" y="28" fontFamily="Arial" fontWeight="bold" fontSize="10" fill="#0068FF">ZL</text>
-              </svg>
+              <button className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:opacity-80 disabled:opacity-50 transition-all cursor-pointer">
+                Đặt lịch
+              </button>
             </a>
           </div>
         </div>

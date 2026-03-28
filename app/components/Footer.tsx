@@ -38,7 +38,7 @@ export default function Footer() {
               ))}
             </div>
             <p className="text-xs text-white/15 font-body uppercase">
-              © {year} Hina Studio
+              © {year} Tiệm ảnh Hina
             </p>
           </div>
         </div>

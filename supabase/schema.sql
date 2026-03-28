@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════
--- Tiệm ảnh Hina Studio — Supabase Schema
+-- Tiệm ảnh Hina — Supabase Schema
 -- Run this in your Supabase SQL Editor
 -- ═══════════════════════════════════════════
 
