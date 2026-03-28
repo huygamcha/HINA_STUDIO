@@ -11,6 +11,7 @@ export function createSlug(str: string): string {
   slug = slug.replace(/[úùủũụưứừửữự]/g, "u");
   slug = slug.replace(/[ýỳỷỹỵ]/g, "y");
   slug = slug.replace(/đ/g, "d");
+  
 
   // Remove combining diacritics
   slug = slug.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
