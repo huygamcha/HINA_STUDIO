@@ -1,7 +1,3 @@
-import { uploadImageToR2, deleteImageFromR2 } from "~/utils/s3.server";
-import { updateAlbum, syncAlbumPhotos } from "~/utils/supabase.server";
-import { prisma } from "~/utils/db.server";
-
 /**
  * Resource Route: /admin/api/album/$id/media
  * Handles all background media operations for an album
@@ -13,6 +9,10 @@ export async function action({
   request: Request;
   params: { id: string };
 }) {
+  const { uploadImageToR2, deleteImageFromR2 } = await import("~/utils/s3.server");
+  const { updateAlbum } = await import("~/utils/supabase.server");
+  const { prisma } = await import("~/utils/db.server");
+
   const albumId = params.id;
   const formData = await request.formData();
   const intent = formData.get("intent") as string;

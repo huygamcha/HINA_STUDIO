@@ -1,7 +1,7 @@
-import { uploadImageToR2 } from "~/utils/s3.server";
-
 // Resource route — no default export, so React Router returns action JSON directly
 export async function action({ request }: { request: Request }) {
+  const { uploadImageToR2 } = await import("~/utils/s3.server");
+
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
 

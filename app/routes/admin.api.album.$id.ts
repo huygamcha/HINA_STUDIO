@@ -1,5 +1,3 @@
-import { updateAlbum, syncAlbumPhotos } from "~/utils/supabase.server";
-
 // Resource route — no default export → returns JSON directly
 export async function action({
   request,
@@ -8,6 +6,8 @@ export async function action({
   request: Request;
   params: { id: string };
 }) {
+  const { updateAlbum, syncAlbumPhotos } = await import("~/utils/supabase.server");
+
   const albumId = params.id;
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
